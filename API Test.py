@@ -16,7 +16,7 @@ error_msg = "Error: Please enter all fields correctly."
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 prefix = '/api/v1/'
-host_ip = '10.2.65.145'
+host_ip = '172.16.4.81'
 
 
 @app.route(prefix + 'models', methods=['GET'])
