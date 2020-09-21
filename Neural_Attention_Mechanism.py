@@ -8,12 +8,9 @@ Created on Fri Apr 10 14:26:30 2020
 
 # https://www.tensorflow.org/tutorials/text/nmt_with_attention#translate
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 import numpy as np
 import os
 import time
-import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
 import shutil
 
 
@@ -21,18 +18,14 @@ import shutil
 epoch_size = 2
 batch_size = 112
 number_of_hidden_neuron = 80
-number_of_hidden_layer = 1
 dropout_rate = 0.2
 recurrent_dropout_rate = 0.2
 optimizer = tf.keras.optimizers.Adam(learning_rate= 0.001, beta_1=0.7)
 loss_function = tf.keras.losses.MeanAbsoluteError()
 activation_function = 'tanh'
-training_ratio = 0.7
-test_ratio = round(1 - training_ratio,2)
-validation_rate = 0.2
+
 checkpoint_dir = './training_checkpoints'
-checkpoints_location = "C:\\Users\\yunus\\Documents\\2019-2020 RTU\\Second Semester\\Intelligent Decision Support Systems\\training_checkpoints"
-conn_str= "Driver={SQL Server};Server=LAPTOP-LMC7DUJV\SQLEXPRESS;Database=DB_MY_PROJECT;Trusted_Connection=yes"
+checkpoints_location = "C:\\Users\\yunus\\Documents\\My Project\\training_checkpoints"
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 
 
@@ -41,7 +34,7 @@ feature_size_target = 0
 backward_window_length = 0
 forward_window_length = 0
 
-# OK
+
 class Encoder(tf.keras.Model):
   def __init__(self, one_hot_size, enc_units, batch_sz):
     super(Encoder, self).__init__()
@@ -62,7 +55,6 @@ class Encoder(tf.keras.Model):
     return tf.zeros((self.batch_sz, self.enc_units))
 
 
-# OK
 class BahdanauAttention(tf.keras.layers.Layer):
   def __init__(self, units):
     super(BahdanauAttention, self).__init__()
@@ -95,8 +87,6 @@ class BahdanauAttention(tf.keras.layers.Layer):
     return context_vector, attention_weights
 
 
-
-# OK
 class Decoder(tf.keras.Model):
   def __init__(self, one_hot_size, dec_units, batch_sz): 
     super(Decoder, self).__init__()
@@ -131,9 +121,7 @@ class Decoder(tf.keras.Model):
     return x, state, attention_weights
 
 
-
-# OK
-# @tf.function
+@tf.function
 def train_step(inp, targ, enc_hidden, p_encoder, p_decoder):
   loss = 0
 
@@ -166,18 +154,16 @@ def train_step(inp, targ, enc_hidden, p_encoder, p_decoder):
   return batch_loss
 
 
-def attention_model(input_tensor_train, target_tensor_train, input_tensor_test,target_tensor_test):
+def attention_model(input_tensor_train, target_tensor_train, input_tensor_test):
     global batch_size
-    global encoder 
+    global encoder
     global decoder
     
     steps_per_epoch = len(input_tensor_train)//batch_size
     buffer_size = len(input_tensor_train)
     
-    
     dataset = create_dataset(input_tensor_train, target_tensor_train).shuffle(buffer_size)
     dataset = dataset.batch(batch_size, drop_remainder=True)
-    
     
     encoder = Encoder(feature_size_input, number_of_hidden_neuron, batch_size)
     decoder = Decoder(feature_size_target, number_of_hidden_neuron, batch_size)
@@ -190,7 +176,8 @@ def attention_model(input_tensor_train, target_tensor_train, input_tensor_test,t
         encoder_hidden = encoder.initialize_hidden_state()
         total_loss = 0
         
-        for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):                
+        for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):         
+            # normalize
             inp = tf.reshape(inp, (batch_size, backward_window_length, feature_size_input, 1))
             targ = tf.reshape(targ, (batch_size, forward_window_length, feature_size_target, 1 )) #since forward window length includes also t.
             
@@ -199,7 +186,7 @@ def attention_model(input_tensor_train, target_tensor_train, input_tensor_test,t
 
             batch_loss = train_step(inp, targ, encoder_hidden, encoder, decoder)
             total_loss += batch_loss
-            
+            # denormalize
 
         # saving (checkpoint) the model every 2 epochs
         if (epoch + 1) % 2 == 0:
@@ -214,15 +201,12 @@ def attention_model(input_tensor_train, target_tensor_train, input_tensor_test,t
     return attention_predict(input_tensor_test)
     
 
-
 def attention_predict(input_tensor_test):
-    
-    global encoder 
+    global encoder
     global decoder
 
     batch_size_test = len(input_tensor_test)
         
-    # dataset_test = create_dataset(input_tensor_test, target_tensor_test)
     dataset_test = (tf.data.Dataset.from_tensor_slices((input_tensor_test)))
     
     dataset_test = dataset_test.batch(batch_size_test, drop_remainder=True)
@@ -232,10 +216,8 @@ def attention_predict(input_tensor_test):
     
     for (batch, (inp_test)) in enumerate(dataset_test.take(steps_per_epoch_test)):  
         inp_test = tf.reshape(inp_test, (batch_size_test, backward_window_length, feature_size_input, 1))
-        # targ_test = tf.reshape(targ_test, (batch_size_test, forward_window_length, feature_size_target, 1 )) #since forward window length includes also t.
-        
+     
         inp_test = tf.reshape(inp_test, (batch_size_test, backward_window_length, feature_size_input))
-        # targ_test = tf.reshape(targ_test, (batch_size_test, forward_window_length,feature_size_target))
         
         encoder_output, encoder_hidden = encoder(inp_test, encoder_hidden)
         decoder_hidden = encoder_hidden
@@ -265,73 +247,12 @@ def attention_predict(input_tensor_test):
     return predictions
 
 
-# OK
 def create_dataset(p_arr_input, p_arr_target):
     ds = (tf.data.Dataset.from_tensor_slices((p_arr_input,p_arr_target)))
     return ds
         
 
-# This function should retrieve expected & predicted dataframes including indexes and column names
-def train(df_input,df_target):
-    # Creating training and validation sets using split ratio
-    input_tensor_train, input_tensor_test, target_tensor_train, target_tensor_test = train_test_split(df_input, df_target, test_size=test_ratio, shuffle=True)
-    
-    df_train_index = input_tensor_train.index
-    df_test_index = input_tensor_test.index
-    
-    scaler_training_input = MinMaxScaler(feature_range=(0, 1))
-    scaler_training_target = MinMaxScaler(feature_range=(0, 1))
-    scaler_test_input = MinMaxScaler(feature_range=(0, 1))
-    scaler_test_target = MinMaxScaler(feature_range=(0, 1))
-    
-    
-    scaled_input_train= scaler_training_input.fit_transform(input_tensor_train)
-    scaled_target_train = scaler_training_target.fit_transform(target_tensor_train)
-    scaled_input_test = scaler_test_input.fit_transform(input_tensor_test)
-    scaled_target_test = scaler_test_target.fit_transform(target_tensor_test)
-
-    actual_result = np.array(target_tensor_test)
-    
-    # #ATTENTION
-    predicted_result = attention_model(scaled_input_train, scaled_target_train, scaled_input_test,scaled_target_test)
-
-    actual_result = target_tensor_test
-    
-    predicted_result = scaler_test_target.inverse_transform(predicted_result)
-    predicted_result = pd.DataFrame(predicted_result)
-    predicted_result["INDEX"] = df_test_index
-    predicted_result = predicted_result.set_index("INDEX")
-    predicted_result.columns = target_tensor_test.columns
-    
-    return actual_result, predicted_result
-
-
-def evaluate(input_tensor_test,target_tensor_test):
-    df_test_index = input_tensor_test.index
-    
-    scaler_test_input = MinMaxScaler(feature_range=(0, 1))
-    scaler_test_target = MinMaxScaler(feature_range=(0, 1))
-    
-    scaled_input_test = scaler_test_input.fit_transform(input_tensor_test)
-    scaled_target_test = scaler_test_target.fit_transform(target_tensor_test)
-
-    actual_result = np.array(target_tensor_test)
-    
-    # #ATTENTION
-    predicted_result = attention_predict(scaled_input_test)
-
-    actual_result = target_tensor_test
-    
-    predicted_result = scaler_test_target.inverse_transform(predicted_result)
-    predicted_result = pd.DataFrame(predicted_result)
-    predicted_result["INDEX"] = df_test_index
-    predicted_result = predicted_result.set_index("INDEX")
-    predicted_result.columns = target_tensor_test.columns
-    
-    return actual_result, predicted_result
-    
-
-def learn(df_input,df_target, df_features_input, df_window_length_input, df_features_target, df_window_length_target):
+def main(scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y):
     try:
         shutil.rmtree(checkpoints_location)
     except OSError as e:
@@ -342,11 +263,11 @@ def learn(df_input,df_target, df_features_input, df_window_length_input, df_feat
     global backward_window_length
     global forward_window_length
         
-    feature_size_input = df_features_input.shape[0]
-    feature_size_target = df_features_target.shape[0]
-    backward_window_length = df_window_length_input.shape[0]
-    forward_window_length = df_window_length_target.shape[0]
+    feature_size_input = feature_size_x
+    feature_size_target = feature_size_y
+    backward_window_length = int(scaled_input_train.shape[1]/feature_size_x)
+    forward_window_length = int(scaled_target_train.shape[1]/feature_size_y)
     
-    act, pred = train(df_input,df_target)
+    predicted_result = attention_model(scaled_input_train, scaled_target_train, scaled_input_test)
     
-    return act, pred
+    return predicted_result
