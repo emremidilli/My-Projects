@@ -147,9 +147,9 @@ def main():
     for i_index, i_row in df_models.iterrows():
         model_id = i_row["ID"]
         execute_sql("EXEC SP_UPDATE_MODEL_STATUS '"+str(model_id)+"', 3, 1")
-        print(model_id)
         result = learn(model_id)
         execute_sql("EXEC SP_UPDATE_MODEL_STATUS '"+str(model_id)+"', "+ str(result) +", 1")
         
+    
     
 main()
