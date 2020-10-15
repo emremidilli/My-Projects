@@ -1,268 +1,155 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Apr 10 14:26:30 2020
+Created on Mon Aug 24 06:20:42 2020
 
 @author: Yunus Emre Midilli
 """
 
-
-# https://www.tensorflow.org/tutorials/text/nmt_with_attention#translate
-import tensorflow as tf
+import Neural_Attention_Mechanism
+import pandas as pd
 import numpy as np
-import os
-import time
-import shutil
+from sklearn import metrics
+from Connect_to_Database import execute_sql
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+import pickle
 
 
-#hyperparameters
-epoch_size = 2
-batch_size = 112
-number_of_hidden_neuron = 80
-dropout_rate = 0.2
-recurrent_dropout_rate = 0.2
-optimizer = tf.keras.optimizers.Adam(learning_rate= 0.001, beta_1=0.7)
-loss_function = tf.keras.losses.MeanAbsoluteError()
-activation_function = 'tanh'
+training_ratio = 0.7
+test_ratio = round(1 - training_ratio,2)
+scalers_dir = './__scalers__/'
 
-checkpoint_dir = './training_checkpoints'
-checkpoints_location = "C:\\Users\\yunus\\Documents\\My Project\\training_checkpoints"
-checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+def get_feature_values(model_id, feature_type_id):
 
-
-feature_size_input = 0
-feature_size_target = 0
-backward_window_length = 0
-forward_window_length = 0
-
-
-class Encoder(tf.keras.Model):
-  def __init__(self, one_hot_size, enc_units, batch_sz):
-    super(Encoder, self).__init__()
-    self.batch_sz = batch_sz
-    self.enc_units = enc_units
+    sql = "EXEC SP_GET_TIME_STEPS "+ str(model_id) +","+ str(feature_type_id)
+    df_time_steps =  execute_sql(sql, "")
     
-    self.gru = tf.keras.layers.GRU(self.enc_units,
-                                    return_sequences=True,
-                                    return_state=True,
-                                    recurrent_initializer='glorot_uniform',activation = activation_function,dropout = dropout_rate , recurrent_dropout= recurrent_dropout_rate)
-    
-  def call(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (backward_window_length, backward_feature_size) 
-    output, state = self.gru(x, initial_state = hidden)
-    return output, state
+    df_all_feature_values = execute_sql("SELECT * FROM FN_GET_MODEL_FEATURE_VALUES("+str(model_id)+")")
+    df_all_feature_values = df_all_feature_values.set_index("TIME_STAMP")
 
-  def initialize_hidden_state(self):
-    return tf.zeros((self.batch_sz, self.enc_units))
-
-
-class BahdanauAttention(tf.keras.layers.Layer):
-  def __init__(self, units):
-    super(BahdanauAttention, self).__init__()
-    self.W1 = tf.keras.layers.Dense(units)
-    self.W2 = tf.keras.layers.Dense(units)
-    self.V = tf.keras.layers.Dense(1)
-    
-    
-  def call(self, query, values): # query = decoder_hidden, values = encoder_output
-    # query hidden state shape == (batch_size, hidden size)(64, 1024)
-    # query_with_time_axis shape == (batch_size, 1, hidden size) (64, 1 , 1024)
-    # values shape == (batch_size, max_len, hidden size) (64, 16, 1024)
-    # we are doing this to broadcast addition along the time axis to calculate the score
-    query_with_time_axis = tf.expand_dims(query, 1)
-
-    # score shape == (batch_size, max_length, 1) (64, 16, 1)
-    # we get 1 at the last axis because we are applying score to self.V
-    # the shape of the tensor before applying self.V is (batch_size, max_length, units) (64, 16, 1024)
-    score = self.V(tf.nn.tanh(
-        self.W1(query_with_time_axis) + self.W2(values)))
-    
-    
-    #Attention_weights shape == (batch_size, max_length, 1) (64, 16,1)
-    attention_weights = tf.nn.softmax(score, axis=1)
-
-    # context_vector shape after sum == (batch_size, hidden_size) (64, 1024)
-    context_vector = attention_weights * values
-    context_vector = tf.reduce_sum(context_vector, axis=1)
-
-    return context_vector, attention_weights
-
-
-class Decoder(tf.keras.Model):
-  def __init__(self, one_hot_size, dec_units, batch_sz): 
-    super(Decoder, self).__init__()
-    self.batch_sz = batch_sz
-    self.dec_units = dec_units
-
-    self.gru = tf.keras.layers.GRU(self.dec_units,
-                                    return_sequences=True, #We use return_sequences=True here because we'd like to access the complete encoded sequence rather than the final summary state.
-                                    return_state=True,
-                                    recurrent_initializer='glorot_uniform',activation = activation_function,dropout = dropout_rate , recurrent_dropout= recurrent_dropout_rate)
-    self.fc = tf.keras.layers.Dense(one_hot_size)
-
-    # used for attention
-    self.attention = BahdanauAttention(self.dec_units)
-    
-  def call(self, x, hidden, enc_output): # dec_input, dec_hidden, enc_output
-    # enc_output shape == (batch_size, max_length, hidden_size)
-    context_vector, attention_weights = self.attention(hidden, enc_output)
-
-    x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
-
-    # passing the concatenated vector to the GRU
-    output, state = self.gru(x)
-    
-    # output shape == (batch_size * 1, hidden_size)
-    output = tf.reshape(output, (-1, output.shape[2]))
-
-    # output shape == (batch_size, vocab)
-    x = self.fc(output)
-
-    return x, state, attention_weights
-
-
-@tf.function
-def train_step(inp, targ, enc_hidden, p_encoder, p_decoder):
-  loss = 0
-
-  with tf.GradientTape() as tape:
-    enc_output, enc_hidden = p_encoder(inp, enc_hidden)
-    dec_hidden = enc_hidden
-    
-    # start one-hot vector is the one hot vector of t.
-    # dec_input = tf.expand_dims(targ[:, 0], 1) 
-    dec_input = tf.expand_dims(np.zeros((batch_size,feature_size_target)) , 1)
-    
-    # Teacher forcing - feeding the target as the next input
-    for t in range(1, targ.shape[1]):
-      # passing enc_output to the decoder
-      predictions, dec_hidden, _ = p_decoder(dec_input, dec_hidden, enc_output)
-      
-      loss += loss_function(targ[:, t], predictions)
-
-      # using teacher forcing
-      dec_input = tf.expand_dims(predictions, 1)
-      
-  
-  batch_loss = (loss / int(targ.shape[1]))
-  
-  variables = p_encoder.trainable_variables + p_decoder.trainable_variables
-  
-  gradients = tape.gradient(loss, variables)
-  
-  optimizer.apply_gradients(zip(gradients, variables))
-  
-  
-  return batch_loss
-
-@tf.function
-def attention_model(input_tensor_train, target_tensor_train, input_tensor_test):
-    global batch_size
-    global encoder
-    global decoder
-    
-    steps_per_epoch = len(input_tensor_train)//batch_size
-    buffer_size = len(input_tensor_train)
-    
-    dataset = create_dataset(input_tensor_train, target_tensor_train).shuffle(buffer_size)
-    dataset = dataset.batch(batch_size, drop_remainder=True)
-    
-    encoder = Encoder(feature_size_input, number_of_hidden_neuron, batch_size)
-    decoder = Decoder(feature_size_target, number_of_hidden_neuron, batch_size)
-
-    checkpoint = tf.train.Checkpoint(optimizer=optimizer,encoder=encoder,decoder=decoder)
-
-    for epoch in range(epoch_size):
-        start = time.time()
+    df_feature_values = pd.DataFrame()
+    for i_index, i_row in df_time_steps.iterrows():
+        time_step_id = i_row["ID"]
+        time_step = int(i_row["TIME_STEP"])
+        feature_id = i_row["FEATURE_ID"]
+        boundary= i_row["BOUNDARY"]
         
-        encoder_hidden = encoder.initialize_hidden_state()
-        total_loss = 0.0
+        df = df_all_feature_values[df_all_feature_values["FEATURE_ID"]==feature_id]
+        df_values = df["VALUE"]
+        df_values = pd.DataFrame(df_values)
+        
+        
+        df_values = df_values["VALUE"].shift(-time_step)
+        df_feature_values[time_step_id] = df_values
+        
+        if boundary == 0:
+            df_feature_values[time_step_id] = 0
+    
+    df_feature_values.sort_index(ascending=False)
+    df_feature_values = df_feature_values.dropna()
+    df_time_steps = df_time_steps.transpose()
+
+    return df_feature_values, df_time_steps
+
+def preprocess(model_id):
+    df_input, df_time_steps_input= get_feature_values(model_id, "1")
+    df_target, df_time_steps_target = get_feature_values(model_id, "2")
+    df_merged =pd.merge(df_input, df_target, left_index=True, right_index=True)
+        
+    df_input = df_merged[df_input.columns]
+    df_target= df_merged[df_target.columns]
+    
+    return  df_input, df_target ,df_time_steps_input, df_time_steps_target
+
+
+def learn(model_id):
+    df_input, df_target, df_time_steps_input, df_time_steps_target = preprocess(model_id)
+    
+    if df_input.shape[0] == 0:
+        result = 4
+    else:
+        tensor_input_train, tensor_input_test, tensor_target_train, tensor_target_test = train_test_split(df_input, df_target, test_size=test_ratio, shuffle=False)
+    
+        df_test_index = tensor_input_test.index
+        df_time_steps_input.columns = df_input.columns
+        df_time_steps_target.columns = df_target.columns 
+        
+        feature_size_x = df_time_steps_input.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
+        feature_size_y = df_time_steps_target.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
+            
+        scaler_input = MinMaxScaler()
+        scaler_target = MinMaxScaler()
+        
+        scaler_input.fit(tensor_input_train)
+        scaler_target.fit(tensor_target_train)
+        
+        scaled_input_train = scaler_input.transform(tensor_input_train)
+        scaled_target_train = scaler_target.transform(tensor_target_train)
+        
+        scaler_input.partial_fit(tensor_input_test)
+        scaler_target.partial_fit(tensor_target_test)
+        scaled_input_test = scaler_input.transform(tensor_input_test)
+        
+        prediction = Neural_Attention_Mechanism.main(scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y)
+        
+        prediction = scaler_target.inverse_transform(prediction)
+        prediction = pd.DataFrame(prediction)
+        prediction["INDEX"] = df_test_index
+        prediction = prediction.set_index("INDEX")
+        prediction.columns = tensor_target_test.columns
+        
+        scaler_file_input = scalers_dir +  str(model_id) + ' input.sav'
+        scaler_file_target =scalers_dir +  str(model_id) + ' target.sav'
+        
+        pickle.dump(scaler_input, open(scaler_file_input, 'wb'))
+        pickle.dump(scaler_target, open(scaler_file_target, 'wb'))
+        
+        actual = tensor_target_test
+        
+        sql ="EXEC SP_DELETE_TESTS " + str(model_id) + "; "
+        
+        df_time_steps_target = df_time_steps_target.transpose()
+        for i_index, i_row in df_time_steps_target.iterrows():   
+            boundary = i_row["BOUNDARY"]
+            
+            if boundary == 1:
+                time_step_id = i_row["ID"]
+                                    
+                y_true = np.array(actual[time_step_id])
+                y_pred = np.array(prediction[time_step_id])
                 
-        for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):         
-            # normalize
-            inp = tf.reshape(inp, (batch_size, backward_window_length, feature_size_input, 1))
-            targ = tf.reshape(targ, (batch_size, forward_window_length, feature_size_target, 1 )) #since forward window length includes also t.
-            
-            inp = tf.reshape(inp, (batch_size, backward_window_length, feature_size_input))
-            targ = tf.reshape(targ, (batch_size, forward_window_length,feature_size_target))
-            
-            batch_loss = train_step(inp, targ, encoder_hidden, encoder, decoder)
-            
-            print(total_loss)
-            print(batch_loss)
-            total_loss += batch_loss
-            
-            # denormalize
+                mse = metrics.mean_squared_error(y_true, y_pred)
+                mae = metrics.mean_absolute_error(y_true, y_pred) 
+                r = np.corrcoef(y_true, y_pred)[0, 1]
+                r2 = r**2
+                mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+                count = len(y_true)
+                exp_var = metrics.explained_variance_score(y_true, y_pred)
+                    
+                sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 1 ,"+ str(count) + "; "                    
+                sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 2 ,"+ str(r2)+ "; "                    
+                sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 3 ,"+ str(mae)+ "; "                         
+                sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 4 ,"+ str(mse)+ "; "                    
+                sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 5 ,"+ str(mape)+ "; "                    
+                sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 6 ,"+ str(exp_var)+ "; "
+                sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 7 ,"+ str(r)+ "; "
 
-        # saving (checkpoint) the model every 2 epochs
-        if (epoch + 1) % 2 == 0:
-            checkpoint.save(file_prefix = checkpoint_prefix)
-            
-        # print('Epoch {} Loss {:.4f}'.format(epoch + 1,total_loss / steps_per_epoch))
-        # print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
+    execute_sql(sql,"none")
+    result = 5
         
-        # restoring the latest checkpoint in checkpoint_dir
-        checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
-    
-    return attention_predict(input_tensor_test)
-    
-
-@tf.function
-def attention_predict(input_tensor_test):
-    global encoder
-    global decoder
-    
-    batch_size_test = len(input_tensor_test)
-    
-    dataset_test = (tf.data.Dataset.from_tensor_slices((input_tensor_test)))
-    
-    dataset_test = dataset_test.batch(batch_size_test, drop_remainder=True)
-    
-    encoder_hidden = tf.zeros((batch_size_test, number_of_hidden_neuron))
-
-    predictions = tf.zeros(1)
-    for (batch, (inp_test)) in enumerate(dataset_test.take(-1)):
-        inp_test = tf.reshape(inp_test, (batch_size_test, backward_window_length, feature_size_input, 1))
-        inp_test = tf.reshape(inp_test, (batch_size_test, backward_window_length, feature_size_input))
-
-        encoder_output, encoder_hidden = encoder(inp_test, encoder_hidden)
-        decoder_hidden = encoder_hidden
-        
-        decoder_input = tf.expand_dims(np.zeros((batch_size_test,feature_size_target)) , 1)
-        
-        p2 = tf.zeros(1)
-        for t in range(0, feature_size_target*forward_window_length):
-            # passing enc_output to the decoder
-            p, dec_hidden, _ = decoder(decoder_input, decoder_hidden, encoder_output)
-            decoder_input = tf.expand_dims(p, 1)
-            if t == 0:
-                p2 = p
-            else:
-                p2 = tf.concat([p2, p],1)
-        
-        predictions = p2
-    return predictions
+    return result
 
 
-def create_dataset(p_arr_input, p_arr_target):
-    ds = (tf.data.Dataset.from_tensor_slices((p_arr_input,p_arr_target)))
-    return ds
-        
-
-def main(scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y):
-    try:
-        shutil.rmtree(checkpoints_location)
-    except OSError as e:
-        print("Error: %s - %s." % (e.filename, e.strerror))
-        
-    global feature_size_input
-    global feature_size_target
-    global backward_window_length
-    global forward_window_length
-        
-    feature_size_input = feature_size_x
-    feature_size_target = feature_size_y
-    backward_window_length = int(scaled_input_train.shape[1]/feature_size_x)
-    forward_window_length = int(scaled_target_train.shape[1]/feature_size_y)
+def main():
+    sql ="SELECT * FROM VW_MODELS --WHERE LATEST_STATUS_ID = 2"
     
-    predicted_result = attention_model(scaled_input_train, scaled_target_train, scaled_input_test)
+    df_models = execute_sql(sql)
+    for i_index, i_row in df_models.iterrows():
+        model_id = i_row["ID"]
+        execute_sql("EXEC SP_UPDATE_MODEL_STATUS '"+str(model_id)+"', 3, 1")
+        print(model_id)
+        result = learn(model_id)
+        execute_sql("EXEC SP_UPDATE_MODEL_STATUS '"+str(model_id)+"', "+ str(result) +", 1")
+        
     
-    return predicted_result
+main()
