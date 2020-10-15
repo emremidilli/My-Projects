@@ -13,6 +13,10 @@ import os
 import shutil
 
 
+
+
+
+
 #hyperparameters
 epoch_size = 2
 batch_size = 112
@@ -32,6 +36,10 @@ feature_size_input = 0
 feature_size_target = 0
 backward_window_length = 0
 forward_window_length = 0
+
+
+
+
 
 
 class Encoder(tf.keras.Model):
@@ -166,6 +174,9 @@ def attention_model(input_tensor_train, target_tensor_train, input_tensor_test):
         
         # restoring the latest checkpoint in checkpoint_dir
         checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+        
+        
+    
     
     return attention_predict(input_tensor_test)
  
@@ -248,7 +259,6 @@ def main(scaled_input_train, scaled_target_train, scaled_input_test, feature_siz
     global backward_window_length
     global forward_window_length
     
-        
     feature_size_input = feature_size_x
     feature_size_target = feature_size_y
     backward_window_length = int(scaled_input_train.shape[1]/feature_size_x)
@@ -256,5 +266,7 @@ def main(scaled_input_train, scaled_target_train, scaled_input_test, feature_siz
     
     create_encoder_decoder()
     predicted_result = attention_model(scaled_input_train, scaled_target_train, scaled_input_test)
-
+    
     return predicted_result
+
+
