@@ -235,6 +235,23 @@ def attention_predict(input_tensor_test):
         
     return predictions
 
+def get_folder_paths(model_id):
+    model_id = str(model_id)
+        
+    checkpoint_dir =  os.path.join(model_id, "__training checkpoints__")
+    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+        
+    encoder_directory = os.path.join(model_id, "__encoder__")
+    encoder_weight_directory = os.path.join(model_id, "__encoder weights__")
+    encoder_weight_directory = os.path.join(encoder_weight_directory, "encoder")
+    
+    decoder_directory = os.path.join(model_id, "__decoder__")
+    decoder_weight_directory = os.path.join(model_id, "__decoder weights__")
+    decoder_weight_directory = os.path.join(decoder_weight_directory, "decoder")
+    
+    
+    return checkpoint_dir, checkpoint_prefix, encoder_directory, encoder_weight_directory, decoder_directory, decoder_weight_directory
+
 
 def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y):
     
@@ -249,21 +266,15 @@ def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, f
     global encoder
     global decoder
     
-    model_id = str(model_id)
+    global encoder_directory
+    global encoder_weight_directory
     
-    checkpoint_dir =  os.path.join(model_id, "__training checkpoints__")
-    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+    global decoder_directory
+    global decoder_weight_directory
     
-    encoder_directory = os.path.join(model_id, "__encoder__")
-    encoder_weight_directory = os.path.join(model_id, "__encoder weights__")
-    encoder_weight_directory = os.path.join(encoder_weight_directory, "encoder")
-    
-    decoder_directory = os.path.join(model_id, "__decoder__")
-    decoder_weight_directory = os.path.join(model_id, "__decoder weights__")
-    decoder_weight_directory = os.path.join(decoder_weight_directory, "decoder")
     
     try:
-        shutil.rmtree(model_id)
+        shutil.rmtree(str(model_id))
     except OSError as e:
         print("Error: %s - %s." % (e.filename, e.strerror))
         
@@ -271,6 +282,8 @@ def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, f
     feature_size_target = feature_size_y
     backward_window_length = int(scaled_input_train.shape[1]/feature_size_x)
     forward_window_length = int(scaled_target_train.shape[1]/feature_size_y)
+    
+    checkpoint_dir, checkpoint_prefix, encoder_directory, encoder_weight_directory, decoder_directory, decoder_weight_directory = get_folder_paths(model_id)
     
     encoder, decoder = create_encoder_decoder()
     
