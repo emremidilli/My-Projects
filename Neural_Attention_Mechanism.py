@@ -14,9 +14,6 @@ import shutil
 
 
 
-
-
-
 #hyperparameters
 epoch_size = 2
 batch_size = 112
@@ -27,20 +24,10 @@ optimizer = tf.keras.optimizers.Adam(learning_rate= 0.001, beta_1=0.7)
 loss_function = tf.keras.losses.MeanAbsoluteError()
 activation_function = 'tanh'
 
-checkpoint_dir = './training_checkpoints'
-checkpoints_location = "C:\\Users\\yunus\\Documents\\My Project\\training_checkpoints"
-checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-
-
 feature_size_input = 0
 feature_size_target = 0
 backward_window_length = 0
 forward_window_length = 0
-
-
-
-
-
 
 class Encoder(tf.keras.Model):
     def __init__(self, one_hot_size, enc_units, batch_sz):
@@ -53,7 +40,7 @@ class Encoder(tf.keras.Model):
                                         return_state=True,
                                         recurrent_initializer='glorot_uniform',activation = activation_function,dropout = dropout_rate , recurrent_dropout= recurrent_dropout_rate)
         
-    def call(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (backward_window_length, backward_feature_size) 
+    def __call__(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (backward_window_length, backward_feature_size) 
       output, state = self.gru(x, initial_state = hidden)
       return output, state
 
@@ -67,7 +54,6 @@ class BahdanauAttention(tf.keras.layers.Layer):
         self.W1 = tf.keras.layers.Dense(units)
         self.W2 = tf.keras.layers.Dense(units)
         self.V = tf.keras.layers.Dense(1)
-    
     
     def call(self, query, values): # query = decoder_hidden, values = encoder_output
         # query hidden state shape == (batch_size, hidden size)(64, 1024)
@@ -109,6 +95,7 @@ class Decoder(tf.keras.Model):
         self.attention = BahdanauAttention(self.dec_units)
     
     def call(self, x, hidden, enc_output): # dec_input, dec_hidden, enc_output
+    
         # enc_output shape == (batch_size, max_length, hidden_size)
         context_vector, attention_weights = self.attention(hidden, enc_output)
     
@@ -125,25 +112,27 @@ class Decoder(tf.keras.Model):
     
         return x, state, attention_weights
 
-@tf.function
-def create_encoder_decoder():
-    global encoder
-    global decoder
-     
+
+# @tf.function
+def create_encoder_decoder(): 
     encoder = Encoder(feature_size_input, number_of_hidden_neuron, batch_size)
     decoder = Decoder(feature_size_target, number_of_hidden_neuron, batch_size)
     
     global checkpoint
     checkpoint = tf.train.Checkpoint(optimizer=optimizer,encoder=encoder,decoder=decoder)
+    
+    return encoder, decoder
 
 
-@tf.function
-def attention_model(input_tensor_train, target_tensor_train, input_tensor_test):
+def attention_model(input_tensor_train, target_tensor_train):
 
     global batch_size
     global encoder
     global decoder
     global checkpoint
+    global checkpoint_dir
+    global checkpoint_prefix
+
     
     steps_per_epoch = len(input_tensor_train)//batch_size
     buffer_size = len(input_tensor_train)
@@ -174,11 +163,8 @@ def attention_model(input_tensor_train, target_tensor_train, input_tensor_test):
         
         # restoring the latest checkpoint in checkpoint_dir
         checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
-        
-        
+
     
-    
-    return attention_predict(input_tensor_test)
  
 @tf.function
 def train_step(inp, targ, enc_hidden):
@@ -211,7 +197,7 @@ def train_step(inp, targ, enc_hidden):
     return batch_loss
    
 
-@tf.function
+# @tf.function
 def attention_predict(input_tensor_test):
     global encoder
     global decoder
@@ -230,6 +216,7 @@ def attention_predict(input_tensor_test):
         inp_test = tf.reshape(inp_test, (batch_size_test, backward_window_length, feature_size_input))
 
         encoder_output, encoder_hidden = encoder(inp_test, encoder_hidden)
+        
         decoder_hidden = encoder_hidden
         
         decoder_input = tf.expand_dims(np.zeros((batch_size_test,feature_size_target)) , 1)
@@ -245,28 +232,55 @@ def attention_predict(input_tensor_test):
                 p2 = tf.concat([p2, p],1)
         
         predictions = p2
+        
     return predictions
 
 
-def main(scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y):
-    try:
-        shutil.rmtree(checkpoints_location)
-    except OSError as e:
-        print("Error: %s - %s." % (e.filename, e.strerror))
+def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y):
     
     global feature_size_input
     global feature_size_target
     global backward_window_length
     global forward_window_length
     
+    global checkpoint_dir
+    global checkpoint_prefix
+    
+    global encoder
+    global decoder
+    
+    model_id = str(model_id)
+    
+    checkpoint_dir =  os.path.join(model_id, "__training checkpoints__")
+    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+    
+    encoder_directory = os.path.join(model_id, "__encoder__")
+    encoder_weight_directory = os.path.join(model_id, "__encoder weights__")
+    encoder_weight_directory = os.path.join(encoder_weight_directory, "encoder")
+    
+    decoder_directory = os.path.join(model_id, "__decoder__")
+    decoder_weight_directory = os.path.join(model_id, "__decoder weights__")
+    decoder_weight_directory = os.path.join(decoder_weight_directory, "decoder")
+    
+    try:
+        shutil.rmtree(model_id)
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))
+        
     feature_size_input = feature_size_x
     feature_size_target = feature_size_y
     backward_window_length = int(scaled_input_train.shape[1]/feature_size_x)
     forward_window_length = int(scaled_target_train.shape[1]/feature_size_y)
     
-    create_encoder_decoder()
-    predicted_result = attention_model(scaled_input_train, scaled_target_train, scaled_input_test)
+    encoder, decoder = create_encoder_decoder()
     
+    tf.saved_model.save(encoder, encoder_directory)
+    tf.saved_model.save(decoder, decoder_directory)
+    
+    attention_model(scaled_input_train, scaled_target_train)
+    predicted_result = attention_predict(scaled_input_test)
+    
+    encoder.save_weights(encoder_weight_directory)
+    decoder.save_weights(decoder_weight_directory)
+
     return predicted_result
-
-
