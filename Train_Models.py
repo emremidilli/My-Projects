@@ -28,7 +28,6 @@ def get_feature_values(model_id, feature_type_id):
     df_all_feature_values = df_all_feature_values.set_index("TIME_STAMP")
 
     df_feature_values = pd.DataFrame()
-    df_feature_ids=pd.DataFrame()
     for i_index, i_row in df_time_steps.iterrows():
         time_step_id = i_row["ID"]
         time_step = int(i_row["TIME_STEP"])
@@ -62,6 +61,9 @@ def preprocess(model_id):
     
     return  df_input, df_target ,df_time_steps_input, df_time_steps_target
 
+def get_feature_size(df_time_steps):
+    return df_time_steps.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
+    
 
 def learn(model_id):
     df_input, df_target, df_time_steps_input, df_time_steps_target = preprocess(model_id)
@@ -75,8 +77,8 @@ def learn(model_id):
         df_time_steps_input.columns = df_input.columns
         df_time_steps_target.columns = df_target.columns 
         
-        feature_size_x = df_time_steps_input.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
-        feature_size_y = df_time_steps_target.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
+        feature_size_x = get_feature_size(df_time_steps_input)
+        feature_size_y = get_feature_size(df_time_steps_target)
             
         scaler_input = MinMaxScaler()
         scaler_target = MinMaxScaler()
@@ -91,7 +93,7 @@ def learn(model_id):
         scaler_target.partial_fit(tensor_target_test)
         scaled_input_test = scaler_input.transform(tensor_input_test)
         
-        prediction = Neural_Attention_Mechanism.main(scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y)
+        prediction = Neural_Attention_Mechanism.main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y)
         
         prediction = scaler_target.inverse_transform(prediction)
         prediction = pd.DataFrame(prediction)
