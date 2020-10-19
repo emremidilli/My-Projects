@@ -3,6 +3,8 @@
 Created on Fri Apr 10 14:26:30 2020
 
 @author: Yunus Emre Midilli
+
+Considered that incoming training and to-be predicted data are already scaled.
 """
 
 
@@ -11,7 +13,6 @@ import tensorflow as tf
 import numpy as np
 import os
 import shutil
-
 
 
 #hyperparameters
@@ -118,9 +119,7 @@ def create_encoder_decoder():
     encoder = Encoder(feature_size_input, number_of_hidden_neuron, batch_size)
     decoder = Decoder(feature_size_target, number_of_hidden_neuron, batch_size)
     
-    global checkpoint
-    checkpoint = tf.train.Checkpoint(optimizer=optimizer,encoder=encoder,decoder=decoder)
-    
+
     return encoder, decoder
 
 
@@ -198,10 +197,17 @@ def train_step(inp, targ, enc_hidden):
    
 
 # @tf.function
-def attention_predict(input_tensor_test):
-    global encoder
-    global decoder
+def attention_predict(input_tensor_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y):
     
+    checkpoint_dir, checkpoint_prefix, encoder_directory, decoder_directory = get_folder_directories(model_id)
+    
+    set_dimension(feature_size_x, feature_size_y, window_length_x, window_length_y)
+    
+    encoder, decoder = create_encoder_decoder()
+    
+    encoder.load_weights(encoder_directory)
+    decoder.load_weights(decoder_directory)
+
     batch_size_test = len(input_tensor_test)
     
     dataset_test = (tf.data.Dataset.from_tensor_slices((input_tensor_test)))
@@ -235,31 +241,34 @@ def attention_predict(input_tensor_test):
         
     return predictions
 
-def get_folder_paths(model_id):
+def get_folder_directories(model_id):
     model_id = str(model_id)
         
     checkpoint_dir =  os.path.join(model_id, "__training checkpoints__")
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-        
+
     encoder_directory = os.path.join(model_id, "__encoder__")
-    encoder_weight_directory = os.path.join(model_id, "__encoder weights__")
-    encoder_weight_directory = os.path.join(encoder_weight_directory, "encoder")
     
     decoder_directory = os.path.join(model_id, "__decoder__")
-    decoder_weight_directory = os.path.join(model_id, "__decoder weights__")
-    decoder_weight_directory = os.path.join(decoder_weight_directory, "decoder")
     
-    
-    return checkpoint_dir, checkpoint_prefix, encoder_directory, encoder_weight_directory, decoder_directory, decoder_weight_directory
+    return checkpoint_dir, checkpoint_prefix, encoder_directory,  decoder_directory 
 
-
-def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y):
-    
+def set_dimension(feature_size_x,feature_size_y, window_length_x , window_length_y):
     global feature_size_input
     global feature_size_target
     global backward_window_length
     global forward_window_length
     
+    feature_size_input = feature_size_x
+    feature_size_target = feature_size_y
+    backward_window_length = window_length_x
+    forward_window_length = window_length_y
+
+ 
+
+def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y):
+    
+    global checkpoint
     global checkpoint_dir
     global checkpoint_prefix
     
@@ -267,33 +276,26 @@ def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, f
     global decoder
     
     global encoder_directory
-    global encoder_weight_directory
-    
     global decoder_directory
-    global decoder_weight_directory
-    
     
     try:
         shutil.rmtree(str(model_id))
     except OSError as e:
         print("Error: %s - %s." % (e.filename, e.strerror))
         
-    feature_size_input = feature_size_x
-    feature_size_target = feature_size_y
-    backward_window_length = int(scaled_input_train.shape[1]/feature_size_x)
-    forward_window_length = int(scaled_target_train.shape[1]/feature_size_y)
+
+    checkpoint_dir, checkpoint_prefix, encoder_directory,  decoder_directory = get_folder_directories(model_id)
     
-    checkpoint_dir, checkpoint_prefix, encoder_directory, encoder_weight_directory, decoder_directory, decoder_weight_directory = get_folder_paths(model_id)
-    
+    set_dimension(feature_size_x, feature_size_y, window_length_x, window_length_y)
     encoder, decoder = create_encoder_decoder()
     
-    tf.saved_model.save(encoder, encoder_directory)
-    tf.saved_model.save(decoder, decoder_directory)
+    checkpoint = tf.train.Checkpoint(optimizer=optimizer,encoder=encoder,decoder=decoder)
     
     attention_model(scaled_input_train, scaled_target_train)
-    predicted_result = attention_predict(scaled_input_test)
     
-    encoder.save_weights(encoder_weight_directory)
-    decoder.save_weights(decoder_weight_directory)
-
+    encoder.save_weights(encoder_directory)
+    decoder.save_weights(decoder_directory)
+    
+    predicted_result = attention_predict(scaled_input_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
+    
     return predicted_result
