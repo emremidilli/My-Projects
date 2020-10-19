@@ -19,13 +19,24 @@ training_ratio = 0.7
 test_ratio = round(1 - training_ratio,2)
 scalers_dir = './__scalers__/'
 
-def get_feature_values(model_id, feature_type_id):
+def get_feature_values(model_id, feature_type_id, return_value = True, is_index_time_stamp = True):
 
     sql = "EXEC SP_GET_TIME_STEPS "+ str(model_id) +","+ str(feature_type_id)
     df_time_steps =  execute_sql(sql, "")
     
-    df_all_feature_values = execute_sql("SELECT * FROM FN_GET_MODEL_FEATURE_VALUES("+str(model_id)+")")
-    df_all_feature_values = df_all_feature_values.set_index("TIME_STAMP")
+    if return_value == True:
+        sql_feature_value = "SELECT * FROM FN_GET_MODEL_FEATURE_VALUES("+str(model_id)+")"
+    else:
+        sql_feature_value = "SELECT TOP 1 * FROM FN_GET_MODEL_FEATURE_VALUES("+str(model_id)+")"
+    
+    df_all_feature_values = execute_sql(sql_feature_value)
+    
+    if is_index_time_stamp == True:
+        index_column = "TIME_STAMP"
+    else:
+        index_column = "ID"
+    
+    df_all_feature_values = df_all_feature_values.set_index(index_column)
 
     df_feature_values = pd.DataFrame()
     for i_index, i_row in df_time_steps.iterrows():
@@ -48,7 +59,9 @@ def get_feature_values(model_id, feature_type_id):
     df_feature_values.sort_index(ascending=False)
     df_feature_values = df_feature_values.dropna()
     df_time_steps = df_time_steps.transpose()
-
+    
+    df_time_steps.columns = df_feature_values.columns 
+    
     return df_feature_values, df_time_steps
 
 def preprocess(model_id):
@@ -61,9 +74,10 @@ def preprocess(model_id):
     
     return  df_input, df_target ,df_time_steps_input, df_time_steps_target
 
-def get_feature_size(df_time_steps):
-    return df_time_steps.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
-    
+def get_dimension_size(df_time_steps):
+    feature_size = df_time_steps.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
+    window_length = df_time_steps.loc[["TIME_STEP"]].transpose().TIME_STEP.unique().size
+    return feature_size, window_length
 
 def learn(model_id):
     df_input, df_target, df_time_steps_input, df_time_steps_target = preprocess(model_id)
@@ -74,12 +88,10 @@ def learn(model_id):
         tensor_input_train, tensor_input_test, tensor_target_train, tensor_target_test = train_test_split(df_input, df_target, test_size=test_ratio, shuffle=False)
     
         df_test_index = tensor_input_test.index
-        df_time_steps_input.columns = df_input.columns
-        df_time_steps_target.columns = df_target.columns 
-        
-        feature_size_x = get_feature_size(df_time_steps_input)
-        feature_size_y = get_feature_size(df_time_steps_target)
-            
+
+        feature_size_x, window_length_x = get_dimension_size(df_time_steps_input)
+        feature_size_y, window_length_y = get_dimension_size(df_time_steps_target)
+
         scaler_input = MinMaxScaler()
         scaler_target = MinMaxScaler()
         
@@ -93,7 +105,7 @@ def learn(model_id):
         scaler_target.partial_fit(tensor_target_test)
         scaled_input_test = scaler_input.transform(tensor_input_test)
         
-        prediction = Neural_Attention_Mechanism.main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y)
+        prediction = Neural_Attention_Mechanism.main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y)
         
         prediction = scaler_target.inverse_transform(prediction)
         prediction = pd.DataFrame(prediction)
@@ -102,7 +114,7 @@ def learn(model_id):
         prediction.columns = tensor_target_test.columns
         
         scaler_file_input = scalers_dir +  str(model_id) + ' input.sav'
-        scaler_file_target =scalers_dir +  str(model_id) + ' target.sav'
+        scaler_file_target = scalers_dir +  str(model_id) + ' target.sav'
         
         pickle.dump(scaler_input, open(scaler_file_input, 'wb'))
         pickle.dump(scaler_target, open(scaler_file_target, 'wb'))
@@ -144,7 +156,7 @@ def learn(model_id):
 
 
 def main():
-    sql ="SELECT * FROM VW_MODELS --WHERE LATEST_STATUS_ID = 2"
+    sql ="SELECT * FROM VW_MODELS WHERE LATEST_STATUS_ID = 2"
     
     df_models = execute_sql(sql)
     for i_index, i_row in df_models.iterrows():
