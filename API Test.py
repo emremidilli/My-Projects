@@ -16,7 +16,7 @@ error_msg = "Error: Please enter all fields correctly."
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 prefix = '/api/v1/'
-host_ip = '172.16.4.81'
+host_ip = '192.168.1.37'
 
 
 @app.route(prefix + 'models', methods=['GET'])
@@ -301,7 +301,6 @@ def get_predictions():
         count = len(y_true)
         exp_var = metrics.explained_variance_score(y_true, y_pred)
         
-    
         df_predictions["COUNT"] =count    
         df_predictions["MSE"] =mse
         df_predictions["MAE"] =mae
@@ -310,7 +309,6 @@ def get_predictions():
         df_predictions["MAPE"] =mape
         df_predictions["EXP_VAR"] =exp_var
 
-    
     return df_predictions.to_json(orient='records')
     
 
