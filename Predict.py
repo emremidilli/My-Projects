@@ -2,7 +2,7 @@
 """
 Created on Sun Aug 30 02:42:17 2020
 
-@author: yunus
+@author: yunus emre midilli
 """
 
 import Train
@@ -30,11 +30,11 @@ def main():
             df_to_be_predicted = df_to_be_predicted.set_index("TIME_STAMP")
 
             if df_to_be_predicted.shape[0] > 0:
-                from_time_stamp = df_to_be_predicted.min()
-                to_time_stamp = df_to_be_predicted.max()
+                from_time_stamp = df_to_be_predicted.index.min()
+                to_time_stamp = df_to_be_predicted.index.max()
                 
-                df_input, df_time_steps_input = Preprocess.get_feature_values(model_id, "1",True,True,from_time_stamp, to_time_stamp)
-                df_output , df_time_steps_target = Preprocess.get_feature_values(model_id, "2", False)
+                df_input, df_time_steps_input = Preprocess.get_feature_values(model_id, "1",from_time_stamp, to_time_stamp)
+                df_output , df_time_steps_target = Preprocess.get_feature_values(model_id, "2",from_time_stamp, to_time_stamp)
                 
                 feature_size_x, window_length_x = Preprocess.get_dimension_size(df_time_steps_input)
                 feature_size_y , window_length_y = Preprocess.get_dimension_size(df_time_steps_target)
@@ -62,8 +62,8 @@ def main():
                     prediction = prediction.set_index("INDEX")
                     prediction.columns = df_output.columns
                     
-                    
-                    for l_index, l_row, l_iter in prediction.iterrows():
+
+                    for l_index, l_row in prediction.iterrows():
                         base_feature_value_id =df_to_be_predicted.loc[l_index]["ID"]
                         for time_step_id , predicted_value in l_row.iteritems():
                             sql_add_prediction = "EXEC SP_ADD_PREDICTION "+str(base_feature_value_id)+" ,"+str(time_step_id)+" , '"+str(predicted_value)+"' "
@@ -73,5 +73,5 @@ def main():
                     pickle.dump(scaler_input, open(scaler_file_input, 'wb'))
                     pickle.dump(scaler_target, open(scaler_file_target, 'wb'))
                 
-                
+
 main()
