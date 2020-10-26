@@ -22,7 +22,7 @@ scalers_dir = './__scalers__/'
 
 
 def main():
-    sql ="SELECT * FROM VW_MODELS --WHERE LATEST_STATUS_ID = 2"
+    sql ="SELECT * FROM VW_MODELS WHERE LATEST_STATUS_ID = 2"
     
     df_models = execute_sql(sql)
     for i_index, i_row in df_models.iterrows():
