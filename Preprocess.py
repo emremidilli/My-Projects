@@ -8,26 +8,26 @@ Created on Tue Oct 20 20:55:10 2020
 import pandas as pd
 from Connect_to_Database import execute_sql
 
+# PREASSUMPTIONS:
+    # tbl_feature_values include row data where each time stamp is correctly sequenced.
 
-def get_feature_values(model_id, feature_type_id, return_value = True, is_index_time_stamp = True, from_time_stamp = "DEFAULT", to_time_stamp = "DEFAULT" ):
+
+def get_feature_values(model_id, feature_type_id, from_time_stamp = "DEFAULT", to_time_stamp = "DEFAULT" ):
     sql = "EXEC SP_GET_TIME_STEPS "+ str(model_id) +","+ str(feature_type_id)
     df_time_steps =  execute_sql(sql, "")
+    
+
+    if not from_time_stamp == "DEFAULT":
+        from_time_stamp = "'" + str(from_time_stamp) + "'"
         
-    # from time stamp and to time stamp
+    if not to_time_stamp == "DEFAULT":
+        to_time_stamp = "'" + str(to_time_stamp) + "'"     
     
-    if return_value == True:
-        sql_feature_value = "SELECT * FROM FN_GET_MODEL_FEATURE_VALUES("+str(model_id)+", "+from_time_stamp+", "+to_time_stamp+")"
-    else:
-        sql_feature_value = "SELECT TOP 1 * FN_GET_MODEL_FEATURE_VALUES("+str(model_id)+", "+from_time_stamp+", "+to_time_stamp+")"
-    
+    sql_feature_value = "EXEC  [SP_GET_MODEL_FEATURE_VALUES] "+str(model_id)+", "+ str(feature_type_id) +" ,"+from_time_stamp+", "+to_time_stamp
+
     df_all_feature_values = execute_sql(sql_feature_value)
     
-    if is_index_time_stamp == True:
-        index_column = "TIME_STAMP"
-    else:
-        index_column = "ID"
-    
-    df_all_feature_values = df_all_feature_values.set_index(index_column)
+    df_all_feature_values = df_all_feature_values.set_index("TIME_STAMP")
 
     df_feature_values = pd.DataFrame()
     for i_index, i_row in df_time_steps.iterrows():
@@ -39,7 +39,6 @@ def get_feature_values(model_id, feature_type_id, return_value = True, is_index_
         df = df_all_feature_values[df_all_feature_values["FEATURE_ID"]==feature_id]
         df_values = df["VALUE"]
         df_values = pd.DataFrame(df_values)
-        
         
         df_values = df_values["VALUE"].shift(-time_step)
         df_feature_values[time_step_id] = df_values
