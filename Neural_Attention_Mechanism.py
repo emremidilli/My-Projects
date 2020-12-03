@@ -124,7 +124,6 @@ def create_encoder_decoder():
 
 
 def attention_model(input_tensor_train, target_tensor_train):
-
     global batch_size
     global encoder
     global decoder
@@ -267,7 +266,6 @@ def set_dimension(feature_size_x,feature_size_y, window_length_x , window_length
  
 
 def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y):
-    
     global checkpoint
     global checkpoint_dir
     global checkpoint_prefix
