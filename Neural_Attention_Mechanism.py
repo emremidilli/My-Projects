@@ -7,31 +7,14 @@ Created on Fri Apr 10 14:26:30 2020
 Considered that incoming training and to-be predicted data are already scaled.
 """
 
-
 # https://www.tensorflow.org/tutorials/text/nmt_with_attention#translate
 import tensorflow as tf
 import numpy as np
 import os
 import shutil
 
-
-#hyperparameters
-epoch_size = 2
-batch_size = 112
-number_of_hidden_neuron = 80
-dropout_rate = 0.2
-recurrent_dropout_rate = 0.2
-optimizer = tf.keras.optimizers.Adam(learning_rate= 0.001, beta_1=0.7)
-loss_function = tf.keras.losses.MeanAbsoluteError()
-activation_function = 'tanh'
-
-feature_size_input = 0
-feature_size_target = 0
-backward_window_length = 0
-forward_window_length = 0
-
 class Encoder(tf.keras.Model):
-    def __init__(self, one_hot_size, enc_units, batch_sz):
+    def __init__(self, one_hot_size, enc_units, batch_sz, activation_function, dropout_rate, recurrent_dropout_rate):
         super(Encoder, self).__init__()
         self.batch_sz = batch_sz
         self.enc_units = enc_units
@@ -39,7 +22,7 @@ class Encoder(tf.keras.Model):
         self.gru = tf.keras.layers.GRU(self.enc_units,
                                         return_sequences=True,
                                         return_state=True,
-                                        recurrent_initializer='glorot_uniform',activation = activation_function,dropout = dropout_rate , recurrent_dropout= recurrent_dropout_rate)
+                                        recurrent_initializer='glorot_uniform',activation = activation_function, dropout = dropout_rate , recurrent_dropout= recurrent_dropout_rate)
         
     def __call__(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (backward_window_length, backward_feature_size) 
       output, state = self.gru(x, initial_state = hidden)
@@ -69,7 +52,6 @@ class BahdanauAttention(tf.keras.layers.Layer):
         score = self.V(tf.nn.tanh(
             self.W1(query_with_time_axis) + self.W2(values)))
         
-        
         #Attention_weights shape == (batch_size, max_length, 1) (64, 16,1)
         attention_weights = tf.nn.softmax(score, axis=1)
     
@@ -81,7 +63,7 @@ class BahdanauAttention(tf.keras.layers.Layer):
 
 
 class Decoder(tf.keras.Model):
-    def __init__(self, one_hot_size, dec_units, batch_sz): 
+    def __init__(self, one_hot_size, dec_units, batch_sz, activation_function, dropout_rate, recurrent_dropout_rate): 
         super(Decoder, self).__init__()
         self.batch_sz = batch_sz
         self.dec_units = dec_units
@@ -114,122 +96,135 @@ class Decoder(tf.keras.Model):
         return x, state, attention_weights
 
 
-# @tf.function
-def create_encoder_decoder(): 
-    encoder = Encoder(feature_size_input, number_of_hidden_neuron, batch_size)
-    decoder = Decoder(feature_size_target, number_of_hidden_neuron, batch_size)
+class Neural_Attention_Mechanism(tf.keras.Model):
+    def __init__(self): 
+        super(Neural_Attention_Mechanism, self).__init__()
+        self.epoch_size = 2
+        self.batch_size = 112
+        self.number_of_hidden_neuron = 80
+        self.dropout_rate = 0.2
+        self.recurrent_dropout_rate = 0.2
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate= 0.001, beta_1=0.7)
+        self.loss_function = tf.keras.losses.MeanAbsoluteError()
+        self.activation_function = 'tanh'
+  
+    def set_encoder_decoder(self): 
+        self.encoder = Encoder(self.feature_size_input, self.number_of_hidden_neuron, self.batch_size,self.activation_function, self.dropout_rate, self.recurrent_dropout_rate)
+        self.decoder = Decoder(self.feature_size_target, self.number_of_hidden_neuron, self.batch_size, self.activation_function, self.dropout_rate, self.recurrent_dropout_rate)
+
+    def set_folder_directories(self, model_id):
+        model_id = str(model_id)
+        self.model_directory = os.path.join(model_id, "__model__")
+        
+    def set_checkpoint(self, model_id):
+        model_id = str(model_id)
+        self.checkpoint_dir = os.path.join(model_id, "__training checkpoints__")
+        self.checkpoint_prefix = os.path.join(self.checkpoint_dir, "ckpt")    
+        self.checkpoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
+        
+    def set_dimension(self,feature_size_x,feature_size_y, window_length_x , window_length_y):
+        self.feature_size_input = feature_size_x
+        self.feature_size_target = feature_size_y
+        self.backward_window_length = window_length_x
+        self.forward_window_length = window_length_y
+        
+    @tf.function
+    def train_step(self, inp, targ, enc_hidden):        
+        loss = 0.0
+        with tf.GradientTape() as tape:
+            enc_output, enc_hidden = self.encoder(inp, enc_hidden)
+            dec_hidden = enc_hidden
+            # start one-hot vector is the one hot vector of t.
+            # dec_input = tf.expand_dims(targ[:, 0], 1) 
+            dec_input = tf.expand_dims(np.zeros((self.batch_size,self.feature_size_target)) , 1)
+            # Teacher forcing - feeding the target as the next input
+            for t in range(1, targ.shape[1]):
+                # passing enc_output to the decoder
+                predictions, dec_hidden, _ = self.decoder(dec_input, dec_hidden, enc_output)  
+                loss += self.loss_function(targ[:, t], predictions)
+                # using teacher forcing
+                dec_input = tf.expand_dims(predictions, 1)
+          
+        batch_loss = (loss / int(targ.shape[1]))
+        variables = self.encoder.trainable_variables + self.decoder.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.optimizer.apply_gradients(zip(gradients, variables))
+        return batch_loss
+
+def train(model_id, input_tensor_train, target_tensor_train,scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y): 
+    try:
+        shutil.rmtree(str(model_id))
+    except OSError as e:
+         print("Error: %s - %s." % (e.filename, e.strerror))
     
-
-    return encoder, decoder
-
-
-def attention_model(input_tensor_train, target_tensor_train):
-    global batch_size
-    global encoder
-    global decoder
-    global checkpoint
-    global checkpoint_dir
-    global checkpoint_prefix
-
-    
-    steps_per_epoch = len(input_tensor_train)//batch_size
+    o_model_neural_attention = Neural_Attention_Mechanism()
+    o_model_neural_attention.set_folder_directories(model_id)
+    o_model_neural_attention.set_dimension(feature_size_x, feature_size_y, window_length_x, window_length_y)
+    o_model_neural_attention.set_encoder_decoder()
+    o_model_neural_attention.set_checkpoint(model_id)
+    steps_per_epoch = len(input_tensor_train)//o_model_neural_attention.batch_size
     buffer_size = len(input_tensor_train)
     
     dataset = (tf.data.Dataset.from_tensor_slices((input_tensor_train,target_tensor_train)))
     dataset = dataset.shuffle(buffer_size)
-    dataset = dataset.batch(batch_size, drop_remainder=True)
+    dataset = dataset.batch(o_model_neural_attention.batch_size, drop_remainder=True)
     
-    for epoch in range(epoch_size):
-        encoder_hidden = encoder.initialize_hidden_state()
+    for epoch in range(o_model_neural_attention.epoch_size):
+        encoder_hidden = o_model_neural_attention.encoder.initialize_hidden_state()
         total_loss = 0.0
                 
         for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):
-            # normalize
-            inp = tf.reshape(inp, (batch_size, backward_window_length, feature_size_input, 1))
-            targ = tf.reshape(targ, (batch_size, forward_window_length, feature_size_target, 1 )) #since forward window length includes also t.
+            inp = tf.reshape(inp, (o_model_neural_attention.batch_size, o_model_neural_attention.backward_window_length, o_model_neural_attention.feature_size_input, 1))
+            targ = tf.reshape(targ, (o_model_neural_attention.batch_size, o_model_neural_attention.forward_window_length, o_model_neural_attention.feature_size_target, 1 )) #since forward window length includes also t.
             
-            inp = tf.reshape(inp, (batch_size, backward_window_length, feature_size_input))
-            targ = tf.reshape(targ, (batch_size, forward_window_length,feature_size_target))
+            inp = tf.reshape(inp, (o_model_neural_attention.batch_size, o_model_neural_attention.backward_window_length, o_model_neural_attention.feature_size_input))
+            targ = tf.reshape(targ, (o_model_neural_attention.batch_size, o_model_neural_attention.forward_window_length,o_model_neural_attention.feature_size_target))
             
-            batch_loss = train_step(inp, targ, encoder_hidden)
+            batch_loss = o_model_neural_attention.train_step(inp, targ, encoder_hidden)
             
             total_loss += batch_loss
             
-        # saving (checkpoint) the model every 2 epochs
         if (epoch + 1) % 2 == 0 or epoch == 0:
-            checkpoint.write(file_prefix = checkpoint_prefix)
+            o_model_neural_attention.checkpoint.write(file_prefix = o_model_neural_attention.checkpoint_prefix)
         
-        # restoring the latest checkpoint in checkpoint_dir
-        checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+        o_model_neural_attention.checkpoint.restore(tf.train.latest_checkpoint(o_model_neural_attention.checkpoint_dir))
+    
+    o_model_neural_attention.save_weights(o_model_neural_attention.model_directory)
+    
+    predicted_result = predict(scaled_input_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
+    
+    return predicted_result
 
+def predict(input_tensor_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y):
+    o_model_neural_attention = Neural_Attention_Mechanism()
+    o_model_neural_attention.set_folder_directories(model_id)
+    o_model_neural_attention.set_dimension(feature_size_x, feature_size_y, window_length_x, window_length_y)
+    o_model_neural_attention.set_encoder_decoder()
     
- 
-@tf.function
-def train_step(inp, targ, enc_hidden):
-    global encoder
-    global decoder
+    o_model_neural_attention.load_weights(o_model_neural_attention.model_directory)
     
-    loss = 0.0
-    with tf.GradientTape() as tape:
-        enc_output, enc_hidden = encoder(inp, enc_hidden)
-        dec_hidden = enc_hidden
-        # start one-hot vector is the one hot vector of t.
-        # dec_input = tf.expand_dims(targ[:, 0], 1) 
-        dec_input = tf.expand_dims(np.zeros((batch_size,feature_size_target)) , 1)
-        # Teacher forcing - feeding the target as the next input
-        for t in range(1, targ.shape[1]):
-            # passing enc_output to the decoder
-            predictions, dec_hidden, _ = decoder(dec_input, dec_hidden, enc_output)  
-            loss += loss_function(targ[:, t], predictions)
-            # using teacher forcing
-            dec_input = tf.expand_dims(predictions, 1)
-      
-    batch_loss = (loss / int(targ.shape[1]))
-    
-    variables = encoder.trainable_variables + decoder.trainable_variables
-    
-    gradients = tape.gradient(loss, variables)
-    
-    optimizer.apply_gradients(zip(gradients, variables))
-  
-    return batch_loss
-   
-
-# @tf.function
-def attention_predict(input_tensor_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y):
-    
-    checkpoint_dir, checkpoint_prefix, encoder_directory, decoder_directory = get_folder_directories(model_id)
-    
-    set_dimension(feature_size_x, feature_size_y, window_length_x, window_length_y)
-    
-    encoder, decoder = create_encoder_decoder()
-    
-    encoder.load_weights(encoder_directory)
-    decoder.load_weights(decoder_directory)
-
     batch_size_test = len(input_tensor_test)
     
     dataset_test = (tf.data.Dataset.from_tensor_slices((input_tensor_test)))
     
     dataset_test = dataset_test.batch(batch_size_test, drop_remainder=True)
     
-    encoder_hidden = tf.zeros((batch_size_test, number_of_hidden_neuron))
+    encoder_hidden = tf.zeros((batch_size_test, o_model_neural_attention.number_of_hidden_neuron))
 
     predictions = tf.zeros(1)
     for (batch, (inp_test)) in enumerate(dataset_test.take(-1)):
-        inp_test = tf.reshape(inp_test, (batch_size_test, backward_window_length, feature_size_input, 1))
-        inp_test = tf.reshape(inp_test, (batch_size_test, backward_window_length, feature_size_input))
+        inp_test = tf.reshape(inp_test, (batch_size_test, o_model_neural_attention.backward_window_length, o_model_neural_attention.feature_size_input, 1))
+        inp_test = tf.reshape(inp_test, (batch_size_test, o_model_neural_attention.backward_window_length, o_model_neural_attention.feature_size_input))
 
-        encoder_output, encoder_hidden = encoder(inp_test, encoder_hidden)
+        encoder_output, encoder_hidden = o_model_neural_attention.encoder(inp_test, encoder_hidden)
         
         decoder_hidden = encoder_hidden
         
-        decoder_input = tf.expand_dims(np.zeros((batch_size_test,feature_size_target)) , 1)
+        decoder_input = tf.expand_dims(np.zeros((batch_size_test,o_model_neural_attention.feature_size_target)) , 1)
         
         p2 = tf.zeros(1)
-        for t in range(0, feature_size_target*forward_window_length):
-            # passing enc_output to the decoder
-            p, dec_hidden, _ = decoder(decoder_input, decoder_hidden, encoder_output)
+        for t in range(0, o_model_neural_attention.feature_size_target*o_model_neural_attention.forward_window_length):
+            p, dec_hidden, _ = o_model_neural_attention.decoder(decoder_input, decoder_hidden, encoder_output) # passing enc_output to the decoder
             decoder_input = tf.expand_dims(p, 1)
             if t == 0:
                 p2 = p
@@ -239,61 +234,3 @@ def attention_predict(input_tensor_test, model_id, feature_size_x, feature_size_
         predictions = p2
         
     return predictions
-
-def get_folder_directories(model_id):
-    model_id = str(model_id)
-        
-    checkpoint_dir =  os.path.join(model_id, "__training checkpoints__")
-    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-
-    encoder_directory = os.path.join(model_id, "__encoder__")
-    
-    decoder_directory = os.path.join(model_id, "__decoder__")
-    
-    return checkpoint_dir, checkpoint_prefix, encoder_directory,  decoder_directory 
-
-def set_dimension(feature_size_x,feature_size_y, window_length_x , window_length_y):
-    global feature_size_input
-    global feature_size_target
-    global backward_window_length
-    global forward_window_length
-    
-    feature_size_input = feature_size_x
-    feature_size_target = feature_size_y
-    backward_window_length = window_length_x
-    forward_window_length = window_length_y
-
- 
-
-def main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y):
-    global checkpoint
-    global checkpoint_dir
-    global checkpoint_prefix
-    
-    global encoder
-    global decoder
-    
-    global encoder_directory
-    global decoder_directory
-    
-    try:
-        shutil.rmtree(str(model_id))
-    except OSError as e:
-        print("Error: %s - %s." % (e.filename, e.strerror))
-        
-
-    checkpoint_dir, checkpoint_prefix, encoder_directory,  decoder_directory = get_folder_directories(model_id)
-    
-    set_dimension(feature_size_x, feature_size_y, window_length_x, window_length_y)
-    encoder, decoder = create_encoder_decoder()
-    
-    checkpoint = tf.train.Checkpoint(optimizer=optimizer,encoder=encoder,decoder=decoder)
-    
-    attention_model(scaled_input_train, scaled_target_train)
-    
-    encoder.save_weights(encoder_directory)
-    decoder.save_weights(decoder_directory)
-    
-    predicted_result = attention_predict(scaled_input_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
-    
-    return predicted_result
