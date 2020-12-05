@@ -23,8 +23,8 @@ class Encoder(tf.keras.Model):
                                         return_sequences=True,
                                         return_state=True,
                                         recurrent_initializer='glorot_uniform',activation = activation_function, dropout = dropout_rate , recurrent_dropout= recurrent_dropout_rate)
-        
-    def __call__(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (backward_window_length, backward_feature_size) 
+
+    def call(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (backward_window_length, backward_feature_size) 
       output, state = self.gru(x, initial_state = hidden)
       return output, state
 
@@ -72,6 +72,7 @@ class Decoder(tf.keras.Model):
                                         return_sequences=True, #We use return_sequences=True here because we'd like to access the complete encoded sequence rather than the final summary state.
                                         return_state=True,
                                         recurrent_initializer='glorot_uniform',activation = activation_function,dropout = dropout_rate , recurrent_dropout= recurrent_dropout_rate)
+        
         self.fc = tf.keras.layers.Dense(one_hot_size)
     
         # used for attention
@@ -97,36 +98,31 @@ class Decoder(tf.keras.Model):
 
 
 class Neural_Attention_Mechanism(tf.keras.Model):
-    def __init__(self): 
+    def __init__(self, model_id,feature_size_x , feature_size_y, window_length_x,window_length_y): 
         super(Neural_Attention_Mechanism, self).__init__()
         self.epoch_size = 2
         self.batch_size = 112
         self.number_of_hidden_neuron = 80
-        self.dropout_rate = 0.2
-        self.recurrent_dropout_rate = 0.2
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate= 0.001, beta_1=0.7)
+        self.dropout_rate_encoder = 0.1
+        self.dropout_rate_decoder = 0.5
+        self.recurrent_dropout_rate_encoder = 0.1
+        self.recurrent_dropout_rate_decoder = 0.5
+        self.learning_rate = 0.001
+        self.momentum_rate = 0.9
+        
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate= self.learning_rate, beta_1=self.momentum_rate)
         self.loss_function = tf.keras.losses.MeanAbsoluteError()
         self.activation_function = 'tanh'
-  
-    def set_encoder_decoder(self): 
-        self.encoder = Encoder(self.feature_size_input, self.number_of_hidden_neuron, self.batch_size,self.activation_function, self.dropout_rate, self.recurrent_dropout_rate)
-        self.decoder = Decoder(self.feature_size_target, self.number_of_hidden_neuron, self.batch_size, self.activation_function, self.dropout_rate, self.recurrent_dropout_rate)
-
-    def set_folder_directories(self, model_id):
-        model_id = str(model_id)
+        
         self.model_directory = os.path.join(model_id, "__model__")
-        
-    def set_checkpoint(self, model_id):
-        model_id = str(model_id)
-        self.checkpoint_dir = os.path.join(model_id, "__training checkpoints__")
-        self.checkpoint_prefix = os.path.join(self.checkpoint_dir, "ckpt")    
-        self.checkpoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
-        
-    def set_dimension(self,feature_size_x,feature_size_y, window_length_x , window_length_y):
+
         self.feature_size_input = feature_size_x
         self.feature_size_target = feature_size_y
         self.backward_window_length = window_length_x
         self.forward_window_length = window_length_y
+
+        self.encoder = Encoder(self.feature_size_input, self.number_of_hidden_neuron, self.batch_size,self.activation_function, self.dropout_rate_encoder, self.recurrent_dropout_rate_encoder)
+        self.decoder = Decoder(self.feature_size_target, self.number_of_hidden_neuron, self.batch_size, self.activation_function, self.dropout_rate_decoder, self.recurrent_dropout_rate_decoder)
         
     @tf.function
     def train_step(self, inp, targ, enc_hidden):        
@@ -151,17 +147,20 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.optimizer.apply_gradients(zip(gradients, variables))
         return batch_loss
 
+
 def train(model_id, input_tensor_train, target_tensor_train,scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y): 
+    model_id = str(model_id)
     try:
-        shutil.rmtree(str(model_id))
+        shutil.rmtree(model_id)
     except OSError as e:
          print("Error: %s - %s." % (e.filename, e.strerror))
     
-    o_model_neural_attention = Neural_Attention_Mechanism()
-    o_model_neural_attention.set_folder_directories(model_id)
-    o_model_neural_attention.set_dimension(feature_size_x, feature_size_y, window_length_x, window_length_y)
-    o_model_neural_attention.set_encoder_decoder()
-    o_model_neural_attention.set_checkpoint(model_id)
+    o_model_neural_attention = Neural_Attention_Mechanism(model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
+    
+    checkpoint_dir = os.path.join(model_id, "__training checkpoints__")
+    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")    
+    checkpoint = tf.train.Checkpoint(optimizer=o_model_neural_attention.optimizer,encoder=o_model_neural_attention.encoder,decoder=o_model_neural_attention.decoder)
+    
     steps_per_epoch = len(input_tensor_train)//o_model_neural_attention.batch_size
     buffer_size = len(input_tensor_train)
     
@@ -185,9 +184,9 @@ def train(model_id, input_tensor_train, target_tensor_train,scaled_input_test, f
             total_loss += batch_loss
             
         if (epoch + 1) % 2 == 0 or epoch == 0:
-            o_model_neural_attention.checkpoint.write(file_prefix = o_model_neural_attention.checkpoint_prefix)
+            checkpoint.write(file_prefix = checkpoint_prefix)
         
-        o_model_neural_attention.checkpoint.restore(tf.train.latest_checkpoint(o_model_neural_attention.checkpoint_dir))
+        checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     
     o_model_neural_attention.save_weights(o_model_neural_attention.model_directory)
     
@@ -196,10 +195,7 @@ def train(model_id, input_tensor_train, target_tensor_train,scaled_input_test, f
     return predicted_result
 
 def predict(input_tensor_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y):
-    o_model_neural_attention = Neural_Attention_Mechanism()
-    o_model_neural_attention.set_folder_directories(model_id)
-    o_model_neural_attention.set_dimension(feature_size_x, feature_size_y, window_length_x, window_length_y)
-    o_model_neural_attention.set_encoder_decoder()
+    o_model_neural_attention = Neural_Attention_Mechanism(model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
     
     o_model_neural_attention.load_weights(o_model_neural_attention.model_directory)
     
