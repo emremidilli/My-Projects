@@ -8,21 +8,20 @@ Created on Mon Aug 24 06:20:42 2020
 import Neural_Attention_Mechanism
 import pandas as pd
 import numpy as np
-from sklearn import metrics
 from Connect_to_Database import execute_sql
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import pickle
 import Preprocess
+import Calculate_Accuracy
 
 
 training_ratio = 0.7
 test_ratio = round(1 - training_ratio,2)
 scalers_dir = './__scalers__/'
 
-
 def main():
-    sql ="SELECT * FROM VW_MODELS WHERE LATEST_STATUS_ID = 2"
+    sql ="SELECT * FROM VW_MODELS --WHERE LATEST_STATUS_ID = 2"
     
     df_models = execute_sql(sql)
     for i_index, i_row in df_models.iterrows():
@@ -53,8 +52,8 @@ def main():
             scaler_target.partial_fit(tensor_target_test)
             scaled_input_test = scaler_input.transform(tensor_input_test)
             
-            prediction = Neural_Attention_Mechanism.main(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y)
-            
+            prediction = Neural_Attention_Mechanism.train(model_id, scaled_input_train, scaled_target_train, scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y)
+                        
             prediction = scaler_target.inverse_transform(prediction)
             prediction = pd.DataFrame(prediction)
             prediction["INDEX"] = df_test_index
@@ -77,17 +76,11 @@ def main():
                 
                 if boundary == 1:
                     time_step_id = i_row["ID"]
-                                        
+
                     y_true = np.array(actual[time_step_id])
                     y_pred = np.array(prediction[time_step_id])
                     
-                    mse = metrics.mean_squared_error(y_true, y_pred)
-                    mae = metrics.mean_absolute_error(y_true, y_pred) 
-                    r = np.corrcoef(y_true, y_pred)[0, 1]
-                    r2 = r**2
-                    mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
-                    count = len(y_true)
-                    exp_var = metrics.explained_variance_score(y_true, y_pred)
+                    mse, mae, r, r2, mape, count, exp_var = Calculate_Accuracy.main(y_true, y_pred)
                         
                     sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 1 ,"+ str(count) + "; "                    
                     sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 2 ,"+ str(r2)+ "; "                    
@@ -101,5 +94,4 @@ def main():
         result = 5
         execute_sql("EXEC SP_UPDATE_MODEL_STATUS '"+str(model_id)+"', "+ str(result) +", 1")
         
-    
 main()
