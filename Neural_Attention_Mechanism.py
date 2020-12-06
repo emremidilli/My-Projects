@@ -13,6 +13,7 @@ import numpy as np
 import os
 import shutil
 
+
 class Encoder(tf.keras.Model):
     def __init__(self, one_hot_size, enc_units, batch_sz, activation_function, dropout_rate, recurrent_dropout_rate):
         super(Encoder, self).__init__()
@@ -100,30 +101,42 @@ class Decoder(tf.keras.Model):
 class Neural_Attention_Mechanism(tf.keras.Model):
     def __init__(self, model_id,feature_size_x , feature_size_y, window_length_x,window_length_y): 
         super(Neural_Attention_Mechanism, self).__init__()
-        self.epoch_size = 2
-        self.batch_size = 112
-        self.number_of_hidden_neuron = 80
-        self.dropout_rate_encoder = 0.1
-        self.dropout_rate_decoder = 0.5
-        self.recurrent_dropout_rate_encoder = 0.1
-        self.recurrent_dropout_rate_decoder = 0.5
-        self.learning_rate = 0.001
-        self.momentum_rate = 0.9
+        self.model_id = model_id
         
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate= self.learning_rate, beta_1=self.momentum_rate)
-        self.loss_function = tf.keras.losses.MeanAbsoluteError()
-        self.activation_function = 'tanh'
-        
-        self.model_directory = os.path.join(model_id, "__model__")
+        self.model_directory = os.path.join(self.model_id, "__model__")
 
         self.feature_size_input = feature_size_x
         self.feature_size_target = feature_size_y
         self.backward_window_length = window_length_x
         self.forward_window_length = window_length_y
+        
+        self.set_hyperparameters()
+        
 
+    
+    def set_hyperparameters(self,epoch_size = 2, batch_size = 112, number_of_hidden_neuron = None, dropout_rate_encoder = 0.1,dropout_rate_decoder=0.1, recurrent_dropout_rate_encoder = 0.1, recurrent_dropout_rate_decoder=0.1, learning_rate = 0.001, momentum_rate=0.1):
+        self.epoch_size = epoch_size
+        self.batch_size = batch_size
+        if number_of_hidden_neuron is None:
+            number_of_hidden_neuron = self.feature_size_input*self.backward_window_length*2
+            
+        self.number_of_hidden_neuron = number_of_hidden_neuron
+        self.dropout_rate_encoder = dropout_rate_encoder
+        self.dropout_rate_decoder = dropout_rate_decoder
+        self.recurrent_dropout_rate_encoder = recurrent_dropout_rate_encoder
+        self.recurrent_dropout_rate_decoder = recurrent_dropout_rate_decoder
+        self.learning_rate = learning_rate
+        self.momentum_rate = momentum_rate
+        
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate= self.learning_rate, beta_1=self.momentum_rate)
+        self.loss_function = tf.keras.losses.MeanAbsoluteError()
+        self.activation_function = 'tanh'
+        
         self.encoder = Encoder(self.feature_size_input, self.number_of_hidden_neuron, self.batch_size,self.activation_function, self.dropout_rate_encoder, self.recurrent_dropout_rate_encoder)
         self.decoder = Decoder(self.feature_size_target, self.number_of_hidden_neuron, self.batch_size, self.activation_function, self.dropout_rate_decoder, self.recurrent_dropout_rate_decoder)
-        
+    
+    
+
     @tf.function
     def train_step(self, inp, targ, enc_hidden):        
         loss = 0.0
@@ -148,85 +161,72 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         return batch_loss
 
 
-def train(model_id, input_tensor_train, target_tensor_train,scaled_input_test, feature_size_x, feature_size_y, window_length_x, window_length_y): 
-    model_id = str(model_id)
-    try:
-        shutil.rmtree(model_id)
-    except OSError as e:
-         print("Error: %s - %s." % (e.filename, e.strerror))
-    
-    o_model_neural_attention = Neural_Attention_Mechanism(model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
-    
-    checkpoint_dir = os.path.join(model_id, "__training checkpoints__")
-    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")    
-    checkpoint = tf.train.Checkpoint(optimizer=o_model_neural_attention.optimizer,encoder=o_model_neural_attention.encoder,decoder=o_model_neural_attention.decoder)
-    
-    steps_per_epoch = len(input_tensor_train)//o_model_neural_attention.batch_size
-    buffer_size = len(input_tensor_train)
-    
-    dataset = (tf.data.Dataset.from_tensor_slices((input_tensor_train,target_tensor_train)))
-    dataset = dataset.shuffle(buffer_size)
-    dataset = dataset.batch(o_model_neural_attention.batch_size, drop_remainder=True)
-    
-    for epoch in range(o_model_neural_attention.epoch_size):
-        encoder_hidden = o_model_neural_attention.encoder.initialize_hidden_state()
-        total_loss = 0.0
+    def train(self, input_tensor_train, target_tensor_train):        
+        checkpoint_dir = os.path.join(self.model_id, "__training checkpoints__")
+        checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")    
+        checkpoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
+        
+        steps_per_epoch = len(input_tensor_train)//self.batch_size
+        buffer_size = len(input_tensor_train)
+        
+        dataset = (tf.data.Dataset.from_tensor_slices((input_tensor_train,target_tensor_train)))
+        dataset = dataset.shuffle(buffer_size)
+        dataset = dataset.batch(self.batch_size, drop_remainder=True)
+        
+        for epoch in range(self.epoch_size):
+            encoder_hidden = self.encoder.initialize_hidden_state()
+            total_loss = 0.0
+                    
+            for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):
+                inp = tf.reshape(inp, (self.batch_size, self.backward_window_length, self.feature_size_input, 1))
+                targ = tf.reshape(targ, (self.batch_size, self.forward_window_length, self.feature_size_target, 1 )) #since forward window length includes also t.
                 
-        for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):
-            inp = tf.reshape(inp, (o_model_neural_attention.batch_size, o_model_neural_attention.backward_window_length, o_model_neural_attention.feature_size_input, 1))
-            targ = tf.reshape(targ, (o_model_neural_attention.batch_size, o_model_neural_attention.forward_window_length, o_model_neural_attention.feature_size_target, 1 )) #since forward window length includes also t.
+                inp = tf.reshape(inp, (self.batch_size, self.backward_window_length, self.feature_size_input))
+                targ = tf.reshape(targ, (self.batch_size, self.forward_window_length,self.feature_size_target))
+                
+                batch_loss = self.train_step(inp, targ, encoder_hidden)
+                
+                total_loss += batch_loss
+                
+            if (epoch + 1) % 2 == 0 or epoch == 0:
+                checkpoint.write(file_prefix = checkpoint_prefix)
             
-            inp = tf.reshape(inp, (o_model_neural_attention.batch_size, o_model_neural_attention.backward_window_length, o_model_neural_attention.feature_size_input))
-            targ = tf.reshape(targ, (o_model_neural_attention.batch_size, o_model_neural_attention.forward_window_length,o_model_neural_attention.feature_size_target))
+            checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+        
+        self.save_weights(self.model_directory)
+        
+    
+    def predict(self, input_tensor_test):
+        self.load_weights(self.model_directory)
+        
+        batch_size_test = len(input_tensor_test)
+        
+        dataset_test = (tf.data.Dataset.from_tensor_slices((input_tensor_test)))
+        
+        dataset_test = dataset_test.batch(batch_size_test, drop_remainder=True)
+        
+        encoder_hidden = tf.zeros((batch_size_test, self.number_of_hidden_neuron))
+    
+        predictions = tf.zeros(1)
+        for (batch, (inp_test)) in enumerate(dataset_test.take(-1)):
+            inp_test = tf.reshape(inp_test, (batch_size_test, self.backward_window_length, self.feature_size_input, 1))
+            inp_test = tf.reshape(inp_test, (batch_size_test, self.backward_window_length, self.feature_size_input))
+    
+            encoder_output, encoder_hidden = self.encoder(inp_test, encoder_hidden)
             
-            batch_loss = o_model_neural_attention.train_step(inp, targ, encoder_hidden)
+            decoder_hidden = encoder_hidden
             
-            total_loss += batch_loss
+            decoder_input = tf.expand_dims(np.zeros((batch_size_test,self.feature_size_target)) , 1)
             
-        if (epoch + 1) % 2 == 0 or epoch == 0:
-            checkpoint.write(file_prefix = checkpoint_prefix)
-        
-        checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
-    
-    o_model_neural_attention.save_weights(o_model_neural_attention.model_directory)
-    
-    predicted_result = predict(scaled_input_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
-    
-    return predicted_result
-
-def predict(input_tensor_test, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y):
-    o_model_neural_attention = Neural_Attention_Mechanism(model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
-    
-    o_model_neural_attention.load_weights(o_model_neural_attention.model_directory)
-    
-    batch_size_test = len(input_tensor_test)
-    
-    dataset_test = (tf.data.Dataset.from_tensor_slices((input_tensor_test)))
-    
-    dataset_test = dataset_test.batch(batch_size_test, drop_remainder=True)
-    
-    encoder_hidden = tf.zeros((batch_size_test, o_model_neural_attention.number_of_hidden_neuron))
-
-    predictions = tf.zeros(1)
-    for (batch, (inp_test)) in enumerate(dataset_test.take(-1)):
-        inp_test = tf.reshape(inp_test, (batch_size_test, o_model_neural_attention.backward_window_length, o_model_neural_attention.feature_size_input, 1))
-        inp_test = tf.reshape(inp_test, (batch_size_test, o_model_neural_attention.backward_window_length, o_model_neural_attention.feature_size_input))
-
-        encoder_output, encoder_hidden = o_model_neural_attention.encoder(inp_test, encoder_hidden)
-        
-        decoder_hidden = encoder_hidden
-        
-        decoder_input = tf.expand_dims(np.zeros((batch_size_test,o_model_neural_attention.feature_size_target)) , 1)
-        
-        p2 = tf.zeros(1)
-        for t in range(0, o_model_neural_attention.feature_size_target*o_model_neural_attention.forward_window_length):
-            p, dec_hidden, _ = o_model_neural_attention.decoder(decoder_input, decoder_hidden, encoder_output) # passing enc_output to the decoder
-            decoder_input = tf.expand_dims(p, 1)
-            if t == 0:
-                p2 = p
-            else:
-                p2 = tf.concat([p2, p],1)
-        
-        predictions = p2
-        
-    return predictions
+            p2 = tf.zeros(1)
+            for t in range(0, self.feature_size_target*self.forward_window_length):
+                p, dec_hidden, _ = self.decoder(decoder_input, decoder_hidden, encoder_output) # passing enc_output to the decoder
+                decoder_input = tf.expand_dims(p, 1)
+                if t == 0:
+                    p2 = p
+                else:
+                    p2 = tf.concat([p2, p],1)
+            
+            predictions = p2
+            
+        return predictions
