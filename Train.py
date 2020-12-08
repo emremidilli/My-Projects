@@ -118,7 +118,7 @@ def create_directory(model_id):
          print("Error: %s - %s." % (e.filename, e.strerror))
 
 
-def evaluate_fitness(individual, o_model_neural_attention,scaled_input_train,scaled_target_train,scaled_input_test, scaled_target_test):
+def evaluate_fitness(individual, o_model_neural_attention, scaled_input_train,scaled_target_train,scaled_input_test, scaled_target_test):
     epoch_size = individual[0]
     batch_size = individual[1]
     number_of_hidden_neuron = individual[2]
@@ -128,31 +128,28 @@ def evaluate_fitness(individual, o_model_neural_attention,scaled_input_train,sca
     recurrent_dropout_rate_decoder = individual[6]
     learning_rate = individual[7]
     momentum_rate = individual[8]
-
-    o_model_neural_attention.set_hyperparameters(epoch_size, batch_size, number_of_hidden_neuron, dropout_rate_encoder, dropout_rate_decoder, recurrent_dropout_rate_encoder, recurrent_dropout_rate_decoder, learning_rate, momentum_rate)
-    o_model_neural_attention.train(scaled_input_train, scaled_target_train)
-    prediction = o_model_neural_attention.predict(scaled_input_test)
     
     actual = scaled_target_test
-    
-    zero_indices = np.argwhere(np.all(actual[..., :] == 0, axis=0))
-    
-    y_true = np.delete(actual, zero_indices, axis=1)
-    y_pred = np.delete(prediction, zero_indices, axis=1)
-    
-    print(y_true)
-    
-    print(y_pred)
-    
-    mse, mae, r, r2, mape, count, exp_var = Calculate_Accuracy.main(y_true, y_pred)
-    
-    print(mae)
-    
-    return mae
-
+    big_m = abs(np.max(actual))
+    if batch_size> actual.shape[0]:
+        return big_m
+    else:
+        o_model_neural_attention_2 = Neural_Attention_Mechanism.Neural_Attention_Mechanism(o_model_neural_attention.model_id, o_model_neural_attention.feature_size_input, o_model_neural_attention.feature_size_target, o_model_neural_attention.backward_window_length, o_model_neural_attention.forward_window_length)
+        o_model_neural_attention_2.set_hyperparameters(epoch_size, batch_size, number_of_hidden_neuron, dropout_rate_encoder, dropout_rate_decoder, recurrent_dropout_rate_encoder, recurrent_dropout_rate_decoder, learning_rate, momentum_rate)
+        o_model_neural_attention_2.train(scaled_input_train, scaled_target_train)
+        prediction = o_model_neural_attention_2.predict(scaled_input_test)
+                
+        zero_indices = np.argwhere(np.all(actual[..., :] == 0, axis=0))
+        
+        y_true = np.delete(actual, zero_indices, axis=1)
+        y_pred = np.delete(prediction, zero_indices, axis=1)
+        
+        mse, mae, r, r2, mape, count, exp_var = Calculate_Accuracy.main(y_true, y_pred)
+        
+        return mae
     
 def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scaled_target_train, scaled_input_test, scaled_target_test):
-    creator.create("Fitness_Function", base.Fitness, weights=(1.0,))
+    creator.create("Fitness_Function", base.Fitness, weights=(-1.0,))
     creator.create("Individual", list, fitness = creator.Fitness_Function)
     
     toolbox = base.Toolbox()
@@ -164,7 +161,7 @@ def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scale
     toolbox.register("rng_dropout_rate_decoder", random.uniform, 0.1, 0.7)
     toolbox.register("rng_recurrent_dropout_rate_encoder", random.uniform, 0.1, 0.7)
     toolbox.register("rng_recurrent_dropout_rate_decoder", random.uniform, 0.1, 0.7)
-    toolbox.register("rng_learning_rate", random.uniform, 0.001, 0.1)
+    toolbox.register("rng_learning_rate", random.uniform, 0.001, 0.01)
     toolbox.register("rng_momentum_rate", random.uniform, 0.1, 0.9)
     
     toolbox.register("individual", tools.initCycle, creator.Individual,(toolbox.rng_epoch_size, toolbox.rng_batch_size, toolbox.rng_number_of_hidden_neuron,toolbox.rng_dropout_rate_encoder, toolbox.rng_dropout_rate_encoder, toolbox.rng_recurrent_dropout_rate_encoder, toolbox.rng_recurrent_dropout_rate_decoder, toolbox.rng_learning_rate, toolbox.rng_momentum_rate))
@@ -172,7 +169,7 @@ def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scale
     toolbox.register("evaluate", evaluate_fitness, o_model_neural_attention = o_model_neural_attention,scaled_input_train = scaled_input_train,scaled_target_train = scaled_target_train,scaled_input_test= scaled_input_test, scaled_target_test= scaled_target_test)
     
     
-    genetic_algorithm = Optimize.genetic_algorithm()
+    genetic_algorithm = Optimize.genetic_algorithm(10,0.05,0.5,10,2,0.1)
     
     optimum_result = genetic_algorithm.optimize_with_genetic_algorithm(toolbox)
 
