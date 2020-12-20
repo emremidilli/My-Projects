@@ -112,7 +112,6 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         
         self.set_hyperparameters()
         
-
     
     def set_hyperparameters(self,epoch_size = 2, batch_size = 112, number_of_hidden_neuron = None, dropout_rate_encoder = 0.1,dropout_rate_decoder=0.1, recurrent_dropout_rate_encoder = 0.1, recurrent_dropout_rate_decoder=0.1, learning_rate = 0.001, momentum_rate=0.1):
         self.epoch_size = epoch_size
@@ -136,13 +135,12 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.decoder = Decoder(self.feature_size_target, self.number_of_hidden_neuron, self.batch_size, self.activation_function, self.dropout_rate_decoder, self.recurrent_dropout_rate_decoder)
     
     
-
     @tf.function
     def train_step(self, inp, targ, enc_hidden):        
         loss = 0.0
-        with tf.GradientTape() as tape:
+        with tf.GradientTape() as tape:            
             enc_output, enc_hidden = self.encoder(inp, enc_hidden)
-            dec_hidden = enc_hidden
+            dec_hidden = enc_hidden            
             # start one-hot vector is the one hot vector of t.
             # dec_input = tf.expand_dims(targ[:, 0], 1) 
             dec_input = tf.expand_dims(np.zeros((self.batch_size,self.feature_size_target)) , 1)
@@ -160,7 +158,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.optimizer.apply_gradients(zip(gradients, variables))
         return batch_loss
 
-
+    
     def train(self, input_tensor_train, target_tensor_train):        
         checkpoint_dir = os.path.join(self.model_id, "__training checkpoints__")
         checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")    
