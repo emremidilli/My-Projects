@@ -131,7 +131,9 @@ def evaluate_fitness(individual, o_model_neural_attention, scaled_input_train,sc
     
     actual = scaled_target_test
     big_m = abs(np.max(actual))
-    if batch_size> actual.shape[0]:
+    if batch_size > actual.shape[0]:
+        return big_m
+    elif (isinstance(epoch_size, int) == False or isinstance(batch_size, int) ==False or isinstance(number_of_hidden_neuron, int) == False ):
         return big_m
     else:
         o_model_neural_attention_2 = Neural_Attention_Mechanism.Neural_Attention_Mechanism(o_model_neural_attention.model_id, o_model_neural_attention.feature_size_input, o_model_neural_attention.feature_size_target, o_model_neural_attention.backward_window_length, o_model_neural_attention.forward_window_length)
@@ -149,29 +151,27 @@ def evaluate_fitness(individual, o_model_neural_attention, scaled_input_train,sc
         return mae
     
 def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scaled_target_train, scaled_input_test, scaled_target_test):
+    dic_hyperparameters = {"label":["rng_epoch_size", "rng_batch_size", "rng_number_of_hidden_neuron","rng_dropout_rate_encoder","rng_dropout_rate_decoder", "rng_recurrent_dropout_rate_encoder", "rng_recurrent_dropout_rate_decoder", "rng_learning_rate", "rng_momentum_rate"],
+                        "variable_type": [Optimize.variable_types.integer,Optimize.variable_types.integer,Optimize.variable_types.integer,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal ],
+                        "lower_bound" : [1,100,10,0.1, 0.1, 0.1, 0.1, 0.001, 0.1],
+                        "upper_bound" : [10, 1000, 1000, 0.7, 0.7, 0.7, 0.7, 0.1, 0.9],
+                        "step_size_lower" : [1, 5, 5, 0.05,0.05,0.05,0.05,0.0005,0.005],
+                        "step_size_upper" : [4, 20, 20, 0.20,0.20,0.20,0.20,0.0020,0.020]
+                        }
+    
+    df_hyperparameters = pd.DataFrame(data=dic_hyperparameters)
+
     creator.create("Fitness_Function", base.Fitness, weights=(-1.0,))
-    creator.create("Individual", list, fitness = creator.Fitness_Function)
     
     toolbox = base.Toolbox()
-    
-    toolbox.register("rng_epoch_size", random.randint, 1, 10)
-    toolbox.register("rng_batch_size", random.randint, 100,1000)
-    toolbox.register("rng_number_of_hidden_neuron", random.randint, 10,1000)
-    toolbox.register("rng_dropout_rate_encoder", random.uniform, 0.1, 0.7)
-    toolbox.register("rng_dropout_rate_decoder", random.uniform, 0.1, 0.7)
-    toolbox.register("rng_recurrent_dropout_rate_encoder", random.uniform, 0.1, 0.7)
-    toolbox.register("rng_recurrent_dropout_rate_decoder", random.uniform, 0.1, 0.7)
-    toolbox.register("rng_learning_rate", random.uniform, 0.001, 0.01)
-    toolbox.register("rng_momentum_rate", random.uniform, 0.1, 0.9)
-    
-    toolbox.register("individual", tools.initCycle, creator.Individual,(toolbox.rng_epoch_size, toolbox.rng_batch_size, toolbox.rng_number_of_hidden_neuron,toolbox.rng_dropout_rate_encoder, toolbox.rng_dropout_rate_encoder, toolbox.rng_recurrent_dropout_rate_encoder, toolbox.rng_recurrent_dropout_rate_decoder, toolbox.rng_learning_rate, toolbox.rng_momentum_rate))
-    toolbox.register("population", tools.initRepeat, list ,toolbox.individual)
     toolbox.register("evaluate", evaluate_fitness, o_model_neural_attention = o_model_neural_attention,scaled_input_train = scaled_input_train,scaled_target_train = scaled_target_train,scaled_input_test= scaled_input_test, scaled_target_test= scaled_target_test)
     
     
-    genetic_algorithm = Optimize.genetic_algorithm(10,0.05,0.5,10,2,0.1)
+    particle_swarm_optimization = Optimize.particle_swarm_optimization(creator.Fitness_Function, df_hyperparameters)
+    optimum_result = particle_swarm_optimization.optimize(toolbox)
     
-    optimum_result = genetic_algorithm.optimize_with_genetic_algorithm(toolbox)
+    # genetic_algorithm = Optimize.genetic_algorithm(creator.Fitness_Function, df_hyperparameters)
+    # optimum_result = genetic_algorithm.optimize(toolbox)
 
     epoch_size = optimum_result[0]
     batch_size = optimum_result[1]
