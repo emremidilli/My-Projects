@@ -5,39 +5,84 @@ Created on Sat Nov 28 23:06:26 2020
 @author: yunus
 """
 
-import random
 
+import operator
+from deap import creator
 from deap import tools
+import enum
+import random
+import numpy as np
+from datetime import datetime
+import xlwings as xw
+
+
+class variable_types(enum.Enum):
+    integer = 1
+    decimal = 2
+    
+    
+    def convert_to_random(eType, vMin, vMax):
+        if eType == variable_types.integer:
+            return random.randint(vMin, vMax)
+        elif eType == variable_types.decimal:
+            return random.uniform(vMin, vMax)
+
+                
 
 
 class genetic_algorithm():
-    def __init__(self, population_size = 3, mutation_rate = 0.05, crossoever_rate = 0.5, tournement_size = 3, threshould_error= 0.05, max_number_of_generations = 1,mutation_flip_rate = 0.1):
+    def __init__(self, fitness_function,df_hyperparameters, population_size = 3, mutation_rate = 0.05, crossoever_rate = 0.5, tournement_size = 3, max_number_of_generations = 1,mutation_flip_rate = 0.1):
         self.population_size = population_size
         self.mutation_rate = mutation_rate
         self.crossoever_rate = crossoever_rate
         self.tournement_size = tournement_size
-        self.threshould_error = threshould_error
         self.max_number_of_generations = max_number_of_generations
         self.mutation_flip_rate = mutation_flip_rate
+        self.fitness_function = fitness_function
+        self.df_hyperparameters = df_hyperparameters
         
+    def generate_individual(self, toolbox):
+        creator.create("Individual", list, fitness = self.fitness_function)
+        
+        sGeneOrder = ""
+        
+        for iIndex, oRow in self.df_hyperparameters.iterrows():
+            sLabel = oRow["label"]
+            eVariableType = oRow["variable_type"]
+            decLowerBound = oRow["lower_bound"]
+            decUpperBound = oRow["upper_bound"]
+            toolbox.register(sLabel, variable_types.convert_to_random, eVariableType, decLowerBound, decUpperBound)
 
-    def optimize_with_genetic_algorithm(self, toolbox):
+            
+            if sGeneOrder == "":
+                sGeneOrder = "toolbox."+sLabel
+            else:
+                sGeneOrder = sGeneOrder + "," + "toolbox."+sLabel
+            
+        toolbox.register("individual", tools.initCycle,creator.Individual, eval(sGeneOrder))
+        
+        
+    def optimize(self, toolbox):
+        
+        self.generate_individual(toolbox)
+        
+        toolbox.register("population", tools.initRepeat, list ,toolbox.individual)
     
         toolbox.register("mate", tools.cxTwoPoint)
         toolbox.register("mutate", tools.mutFlipBit, indpb=self.mutation_flip_rate)
         toolbox.register("select", tools.selTournament, tournsize=self.tournement_size)
         
-        pop = toolbox.population(self.population_size)
+        oPopulation = toolbox.population(self.population_size)
         
         print("Start of evolution")
-        fitnesses = list(map(toolbox.evaluate, pop))
-        for ind, fit in zip(pop, fitnesses):
+        aFitnesses = list(map(toolbox.evaluate, oPopulation))
+        for ind, fit in zip(oPopulation, aFitnesses):
             ind.fitness.values = (fit,)
             
-        print("  Evaluated %i individuals" % len(pop))
+        print("  Evaluated %i individuals" % len(oPopulation))
         
-        # # Extracting all the fitnesses of 
-        fits = [ind.fitness.values[0] for ind in pop]
+        # # Extracting all the aFitnesses of 
+        fits = [ind.fitness.values[0] for ind in oPopulation]
         
         i = 0
         
@@ -46,7 +91,7 @@ class genetic_algorithm():
             
             print("-- Generation %i --" % i)
             # Select the next generation individuals
-            offspring = toolbox.select(pop, len(pop))
+            offspring = toolbox.select(oPopulation, len(oPopulation))
             # Clone the selected individuals
             offspring = list(map(toolbox.clone, offspring)) 
             
@@ -69,18 +114,18 @@ class genetic_algorithm():
     
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            fitnesses = map(toolbox.evaluate, invalid_ind)
-            for ind, fit in zip(invalid_ind, fitnesses):
+            aFitnesses = map(toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, aFitnesses):
                 ind.fitness.values = (fit,)
                 
             print("  Evaluated %i individuals" % len(invalid_ind))
             # The population is entirely replaced by the offspring
-            pop[:] = offspring
+            oPopulation[:] = offspring
             
-            # Gather all the fitnesses in one list and print the stats
-            fits = [ind.fitness.values[0] for ind in pop]
+            # Gather all the aFitnesses in one list and print the stats
+            fits = [ind.fitness.values[0] for ind in oPopulation]
             
-            length = len(pop)
+            length = len(oPopulation)
             mean = sum(fits) / length
             sum2 = sum(x*x for x in fits)
             std = abs(sum2 / length - mean**2)**0.5
@@ -92,7 +137,144 @@ class genetic_algorithm():
             
             print("-- End of (successful) evolution --")
        
-        best_ind = tools.selBest(pop, 1)[0]
+        best_ind = tools.selBest(oPopulation, 1)[0]
         print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values)) 
         
         return best_ind
+    
+class particle_swarm_optimization():
+    def __init__(self,fitness_function,df_hyperparameters, population_size = 3, max_number_of_generations = 3, inertia_weight = 0.2, exploration_coefficient = 0.4, explotation_coefficient = 0.4):
+        self.population_size = population_size        
+        self.max_number_of_generations = max_number_of_generations
+        self.inertia_weight = inertia_weight
+        self.exploration_coefficient = exploration_coefficient
+        self.explotation_coefficient = explotation_coefficient
+        self.ratio_for_bounds = 0.01
+        self.fitness_function = fitness_function
+        self.df_hyperparameters = df_hyperparameters
+        
+    
+    def generate_particle(self, toolbox):
+        creator.create("Particle", list, fitness = self.fitness_function, aSpeed = list ,aSpeedMin = list, aSpeedMax = list, aPersonalBest = list, aLabel = list)
+        
+        sDecisionVariables = ""
+        sDecisionVariableSpeeds = ""
+        for iIndex, oRow in self.df_hyperparameters.iterrows():
+            sLabel = oRow["label"]
+            sLabelSpeed= sLabel + "_speed"
+            eVariableType = oRow["variable_type"]
+            decLowerBound = oRow["lower_bound"]
+            decUpperBound = oRow["upper_bound"]
+            decStepSizeLower = oRow["step_size_lower"]
+            decStepSizeUpper = oRow["step_size_upper"]
+            
+            toolbox.register(sLabel, variable_types.convert_to_random,eVariableType , decLowerBound, decUpperBound)
+            toolbox.register(sLabelSpeed, variable_types.convert_to_random, eVariableType, decStepSizeLower, decStepSizeUpper)
+            
+            if sDecisionVariables == "":
+                sDecisionVariables = "toolbox."+sLabel
+                sDecisionVariableSpeeds = "toolbox."+sLabelSpeed
+            else:
+                sDecisionVariables = sDecisionVariables + "," + "toolbox."+sLabel
+                sDecisionVariableSpeeds = sDecisionVariableSpeeds + "," + "toolbox."+sLabelSpeed
+        
+        
+        oParticle = creator.Particle(tools.initCycle(creator.Particle,eval(sDecisionVariables)))
+        oParticle.aPersonalBest = oParticle
+        
+        oParticle.aSpeed = tools.initCycle(list, eval(sDecisionVariableSpeeds))
+        oParticle.aSpeedMin = list(self.df_hyperparameters["lower_bound"])
+        oParticle.aSpeedMax = list(self.df_hyperparameters["upper_bound"])
+        oParticle.aLabel = list(self.df_hyperparameters["label"])
+        
+        return oParticle
+        
+    
+    def update_particle(self, oParticle, oParticleGlobalBest):
+        aRandom1 = np.random.uniform(0,1, len(oParticle))
+        aCoeffCognitiveComponent = self.exploration_coefficient * aRandom1
+        
+        aDistanceToPersonalBest = map(operator.sub, oParticle.aPersonalBest, oParticle)
+        aCognitiveComponent = map(operator.mul, aCoeffCognitiveComponent, aDistanceToPersonalBest)
+        
+        aRandom2 = np.random.uniform(0,1, len(oParticle))
+        aCoeffSocialComponent = self.explotation_coefficient * aRandom2
+        
+        aDistanceToGlobalBest = map(operator.sub, oParticleGlobalBest, oParticle)
+        aSocialComponent = map(operator.mul, aCoeffSocialComponent, aDistanceToGlobalBest)
+        
+        oParticle.aSpeed = list(map(operator.add, oParticle.aSpeed, map(operator.add, aCognitiveComponent, aSocialComponent)))
+        
+        oParticle[:] = list(map(operator.add, oParticle, oParticle.aSpeed))
+        
+    def optimize(self, toolbox):
+        toolbox.register("particle", self.generate_particle, toolbox)
+        toolbox.register("population", tools.initRepeat, list ,toolbox.particle)
+        toolbox.register("update", self.update_particle)
+        
+        oWbOutput, oWsOutput = Result_Logs.open_output_file()
+        
+        aPopulation = toolbox.population(self.population_size)
+        oParticleGlobalBest = list
+        
+        iRunId = 1
+        for i in range(self.max_number_of_generations):
+            for oParticle in aPopulation:
+                
+                oParticle.fitness.values = (toolbox.evaluate(oParticle),)
+                
+                Result_Logs.log_to_output_file(oWsOutput, iRunId, i+1,oParticle, oParticle.fitness.values)
+                
+                if not oParticle.aPersonalBest or oParticle.aPersonalBest.fitness < oParticle.fitness:
+                    oParticle.aPersonalBest = creator.Particle(oParticle)
+                    oParticle.aPersonalBest.fitness.values = oParticle.fitness.values
+                    
+                if oParticleGlobalBest:
+                    oParticleGlobalBest = creator.Particle(oParticle)
+                    oParticleGlobalBest.fitness.values = oParticle.fitness.values
+                else:
+                    if oParticleGlobalBest.fitness < oParticle.fitness:
+                       oParticleGlobalBest = creator.Particle(oParticle)
+                       oParticleGlobalBest.fitness.values = oParticle.fitness.values  
+
+                iRunId = iRunId + 1
+            for oParticle in aPopulation:
+                toolbox.update(oParticle, oParticleGlobalBest)
+                
+        Result_Logs.close_output_file(oWbOutput)
+                
+        return oParticleGlobalBest
+    
+
+class Result_Logs():
+    def open_output_file():
+        oWbOutput = xw.Book() 
+        oWsOutput = oWbOutput.sheets(1)
+        return oWbOutput, oWsOutput
+    
+    
+    def log_to_output_file(oWsOutput, iRunId, iGenerationId, aDecisionVariables, aFitnessValues):
+        iLastRowOutput = oWsOutput.range('A' + str(oWsOutput.cells.last_cell.row)).end('up').row
+        
+        if iLastRowOutput == 1:
+            oWsOutput.range("A1").value = "Run ID"
+            oWsOutput.range("B1").value = "Generation ID"
+            oWsOutput.range("C1").value = "Time Stamp"
+            oWsOutput.range("D1").value = "Decision Variables"
+            oWsOutput.range("E1").value = "Fitness Values"
+        
+        sDecisionVariables = ';'.join(str(x) for x in aDecisionVariables)
+        sFitnessValues = ';'.join(str(x) for x in aFitnessValues)
+        
+        sTimeStamp = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+        
+        oWsOutput.range("A" + str(iLastRowOutput + 1)).value = iRunId
+        oWsOutput.range("B" + str(iLastRowOutput + 1)).value = iGenerationId
+        oWsOutput.range("C" + str(iLastRowOutput + 1)).value = sTimeStamp
+        oWsOutput.range("D" + str(iLastRowOutput + 1)).value = sDecisionVariables
+        oWsOutput.range("E" + str(iLastRowOutput + 1)).value = sFitnessValues
+        
+        
+    def close_output_file(oWbOutput):
+        oWbOutput.save()
+        oWbOutput.close()        
