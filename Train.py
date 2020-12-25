@@ -17,11 +17,8 @@ import Calculate_Accuracy
 import shutil
 
 import Optimize
-import random
 from deap import base
 from deap import creator
-from deap import tools
-
 
 training_ratio = 0.7
 test_ratio = round(1 - training_ratio,2)
@@ -130,10 +127,11 @@ def evaluate_fitness(individual, o_model_neural_attention, scaled_input_train,sc
     momentum_rate = individual[8]
     
     actual = scaled_target_test
-    big_m = abs(np.max(actual))
-    if batch_size > actual.shape[0]:
-        return big_m
-    elif (isinstance(epoch_size, int) == False or isinstance(batch_size, int) ==False or isinstance(number_of_hidden_neuron, int) == False ):
+
+    big_m = 999999
+    
+    
+    if batch_size > actual.shape[0] or min(individual) <= 0 :
         return big_m
     else:
         o_model_neural_attention_2 = Neural_Attention_Mechanism.Neural_Attention_Mechanism(o_model_neural_attention.model_id, o_model_neural_attention.feature_size_input, o_model_neural_attention.feature_size_target, o_model_neural_attention.backward_window_length, o_model_neural_attention.forward_window_length)
@@ -183,6 +181,7 @@ def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scale
     learning_rate= optimum_result[7]
     momentum_rate= optimum_result[8]
     
+    print(optimum_result)
     o_model_neural_attention.set_hyperparameters(epoch_size, batch_size, number_of_hidden_neuron, dropout_rate_encoder, dropout_rate_decoder, recurrent_dropout_rate_encoder, recurrent_dropout_rate_decoder, learning_rate, momentum_rate )
 
     return o_model_neural_attention
