@@ -62,6 +62,7 @@ class genetic_algorithm():
         toolbox.register("individual", tools.initCycle,creator.Individual, eval(sGeneOrder))
         
         
+
     def optimize(self, toolbox):
         
         self.generate_individual(toolbox)
@@ -143,13 +144,12 @@ class genetic_algorithm():
         return best_ind
     
 class particle_swarm_optimization():
-    def __init__(self,fitness_function,df_hyperparameters, population_size = 3, max_number_of_generations = 3, inertia_weight = 0.2, exploration_coefficient = 0.4, explotation_coefficient = 0.4):
+    def __init__(self,fitness_function,df_hyperparameters, population_size = 2, max_number_of_generations = 5, inertia_weight = 0.2, exploration_coefficient = 0.4, explotation_coefficient = 0.4):
         self.population_size = population_size        
         self.max_number_of_generations = max_number_of_generations
         self.inertia_weight = inertia_weight
         self.exploration_coefficient = exploration_coefficient
         self.explotation_coefficient = explotation_coefficient
-        self.ratio_for_bounds = 0.01
         self.fitness_function = fitness_function
         self.df_hyperparameters = df_hyperparameters
         
@@ -188,8 +188,9 @@ class particle_swarm_optimization():
         oParticle.aLabel = list(self.df_hyperparameters["label"])
         
         return oParticle
-        
     
+    
+
     def update_particle(self, oParticle, oParticleGlobalBest):
         aRandom1 = np.random.uniform(0,1, len(oParticle))
         aCoeffCognitiveComponent = self.exploration_coefficient * aRandom1
@@ -205,8 +206,24 @@ class particle_swarm_optimization():
         
         oParticle.aSpeed = list(map(operator.add, oParticle.aSpeed, map(operator.add, aCognitiveComponent, aSocialComponent)))
         
+
         oParticle[:] = list(map(operator.add, oParticle, oParticle.aSpeed))
         
+        for i in range(len(oParticle)):
+            eVariableType = self.df_hyperparameters["variable_type"][i]
+            decUpperBound = self.df_hyperparameters["upper_bound"][i]
+            decLowerBound = self.df_hyperparameters["lower_bound"][i]
+
+            decValue = oParticle[i]
+            if decValue < decLowerBound:
+                oParticle[i] = decLowerBound
+            elif decValue > decUpperBound:
+                oParticle[i] = decUpperBound
+            
+            decValue = oParticle[i]
+            if eVariableType == variable_types.integer:
+                oParticle[i] = int(decValue)
+
     def optimize(self, toolbox):
         toolbox.register("particle", self.generate_particle, toolbox)
         toolbox.register("population", tools.initRepeat, list ,toolbox.particle)
@@ -220,16 +237,20 @@ class particle_swarm_optimization():
         iRunId = 1
         for i in range(self.max_number_of_generations):
             for oParticle in aPopulation:
-                
+                print(oParticle)
                 oParticle.fitness.values = (toolbox.evaluate(oParticle),)
                 
                 Result_Logs.log_to_output_file(oWsOutput, iRunId, i+1,oParticle, oParticle.fitness.values)
                 
-                if not oParticle.aPersonalBest or oParticle.aPersonalBest.fitness < oParticle.fitness:
+                if not oParticle.aPersonalBest:
                     oParticle.aPersonalBest = creator.Particle(oParticle)
-                    oParticle.aPersonalBest.fitness.values = oParticle.fitness.values
+                    oParticle.aPersonalBest.fitness.values = oParticle.fitness.values                    
+                else:                    
+                    if oParticle.aPersonalBest.fitness < oParticle.fitness:
+                        oParticle.aPersonalBest = creator.Particle(oParticle)
+                        oParticle.aPersonalBest.fitness.values = oParticle.fitness.values    
                     
-                if oParticleGlobalBest:
+                if oParticleGlobalBest == list:
                     oParticleGlobalBest = creator.Particle(oParticle)
                     oParticleGlobalBest.fitness.values = oParticle.fitness.values
                 else:
