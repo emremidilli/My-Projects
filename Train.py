@@ -149,7 +149,8 @@ def evaluate_fitness(individual, o_model_neural_attention, scaled_input_train,sc
         return mae
     
 def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scaled_target_train, scaled_input_test, scaled_target_test):
-    dic_hyperparameters = {"label":["rng_epoch_size", "rng_batch_size", "rng_number_of_hidden_neuron","rng_dropout_rate_encoder","rng_dropout_rate_decoder", "rng_recurrent_dropout_rate_encoder", "rng_recurrent_dropout_rate_decoder", "rng_learning_rate", "rng_momentum_rate"],
+    dicDecisionVariables = {
+                        "label":["epoch_size", "batch_size", "number_of_hidden_neuron","dropout_rate_encoder","rng_dropout_rate_decoder", "recurrent_dropout_rate_encoder", "recurrent_dropout_rate_decoder", "learning_rate", "momentum_rate"],
                         "variable_type": [Optimize.variable_types.integer,Optimize.variable_types.integer,Optimize.variable_types.integer,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal ],
                         "lower_bound" : [1,100,10,0.1, 0.1, 0.1, 0.1, 0.001, 0.1],
                         "upper_bound" : [10, 1000, 1000, 0.7, 0.7, 0.7, 0.7, 0.1, 0.9],
@@ -157,19 +158,24 @@ def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scale
                         "step_size_upper" : [4, 20, 20, 0.20,0.20,0.20,0.20,0.0020,0.020]
                         }
     
-    df_hyperparameters = pd.DataFrame(data=dic_hyperparameters)
+    dicObjectiveFunctions =  {
+                        "label":["Mean Absolute Error"]
+                        }
+    
+    
+    dfDecisonVariables = pd.DataFrame(data=dicDecisionVariables)
+    dfObjectiveFunctions = pd.DataFrame(data=dicObjectiveFunctions)
 
     creator.create("Fitness_Function", base.Fitness, weights=(-1.0,))
     
     toolbox = base.Toolbox()
     toolbox.register("evaluate", evaluate_fitness, o_model_neural_attention = o_model_neural_attention,scaled_input_train = scaled_input_train,scaled_target_train = scaled_target_train,scaled_input_test= scaled_input_test, scaled_target_test= scaled_target_test)
     
+    # particle_swarm_optimization = Optimize.particle_swarm_optimization(creator.Fitness_Function,dfObjectiveFunctions, dfDecisonVariables)
+    # optimum_result = particle_swarm_optimization.optimize(toolbox)
     
-    particle_swarm_optimization = Optimize.particle_swarm_optimization(creator.Fitness_Function, df_hyperparameters)
-    optimum_result = particle_swarm_optimization.optimize(toolbox)
-    
-    # genetic_algorithm = Optimize.genetic_algorithm(creator.Fitness_Function, df_hyperparameters)
-    # optimum_result = genetic_algorithm.optimize(toolbox)
+    genetic_algorithm = Optimize.genetic_algorithm(creator.Fitness_Function,dfObjectiveFunctions, dfDecisonVariables)
+    optimum_result = genetic_algorithm.optimize(toolbox)
 
     epoch_size = optimum_result[0]
     batch_size = optimum_result[1]
@@ -181,7 +187,6 @@ def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scale
     learning_rate= optimum_result[7]
     momentum_rate= optimum_result[8]
     
-    print(optimum_result)
     o_model_neural_attention.set_hyperparameters(epoch_size, batch_size, number_of_hidden_neuron, dropout_rate_encoder, dropout_rate_decoder, recurrent_dropout_rate_encoder, recurrent_dropout_rate_decoder, learning_rate, momentum_rate )
 
     return o_model_neural_attention
