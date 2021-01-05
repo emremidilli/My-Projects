@@ -11,7 +11,7 @@ Considered that incoming training and to-be predicted data are already scaled.
 import tensorflow as tf
 import numpy as np
 import os
-import shutil
+
 
 
 class Encoder(tf.keras.Model):
@@ -76,7 +76,6 @@ class Decoder(tf.keras.Model):
         
         self.fc = tf.keras.layers.Dense(one_hot_size)
     
-        # used for attention
         self.attention = BahdanauAttention(self.dec_units)
     
     def call(self, x, hidden, enc_output): # dec_input, dec_hidden, enc_output
