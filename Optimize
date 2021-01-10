@@ -26,20 +26,20 @@ class variable_types(enum.Enum):
         elif eType == variable_types.decimal:
             return random.uniform(vMin, vMax)
 
-                
 
 
 class genetic_algorithm():
-    def __init__(self, fitness_function,dfObjectiveFunctions, dfDecisonVariables, population_size = 40, mutation_rate = 0.05, crossoever_rate = 0.5, tournement_size = 3, max_number_of_generations = 2,mutation_flip_rate = 0.1):
-        self.population_size = population_size
-        self.mutation_rate = mutation_rate
-        self.crossoever_rate = crossoever_rate
-        self.tournement_size = tournement_size
-        self.max_number_of_generations = max_number_of_generations
-        self.mutation_flip_rate = mutation_flip_rate
+    def __init__(self, fitness_function,dfObjectiveFunctions, dfDecisonVariables, iMaxNumberOfGenerations, iPopulationSize, decSimilarityRatio, decCrossoverRate,decMutationRate, decMutationCrowdingDegree):
         self.fitness_function = fitness_function
-        self.dfDecisonVariables = dfDecisonVariables
         self.dfObjectiveFunctions = dfObjectiveFunctions
+        self.dfDecisonVariables = dfDecisonVariables
+        self.iMaxNumberOfGenerations = iMaxNumberOfGenerations
+        self.iPopulationSize = iPopulationSize
+        self.decSimilarityRatio = decSimilarityRatio
+        self.decCrossoverRate = decCrossoverRate
+        self.decMutationRate = decMutationRate
+        self.decMutationCrowdingDegree = decMutationCrowdingDegree
+        
         
     def generate_individual(self, toolbox):
         creator.create("Individual", list, fitness = self.fitness_function)
@@ -62,7 +62,7 @@ class genetic_algorithm():
         
         
     def crossover(self, oIndividual1, oIndividual2):
-        if random.random() < self.crossoever_rate:
+        if random.random() < self.decCrossoverRate:
             size = len(oIndividual1)
             cxpoint1 = random.randint(1, size)
             cxpoint2 = random.randint(1, size - 1)
@@ -98,34 +98,33 @@ class genetic_algorithm():
 
     
     
-    def mutate(self, oIndividual):
-        if random.random() < self.mutation_rate:
-            tools.mutFlipBit(oIndividual,self.mutation_flip_rate)
-            
-            for i in range(len(oIndividual)):
-                eVariableType = self.dfDecisonVariables["variable_type"][i]
-                decUpperBound = self.dfDecisonVariables["upper_bound"][i]
-                decLowerBound = self.dfDecisonVariables["lower_bound"][i]
-                if oIndividual[i] < decLowerBound:
-                    oIndividual[i] = decLowerBound
-                elif oIndividual[i] > decUpperBound:
-                    oIndividual[i] = decUpperBound
-                            
-                if eVariableType == variable_types.integer:
-                    oIndividual[i]= int(oIndividual[i])
-            
-            oIndividual.fitness.values
+    def mutate(self, oIndividual):            
+        tools.mutPolynomialBounded(oIndividual,self.decMutationCrowdingDegree, self.dfDecisonVariables["lower_bound"].values.tolist(),self.dfDecisonVariables["upper_bound"].values.tolist(), self.decMutationRate)
+        
+        for i in range(len(oIndividual)):
+            eVariableType = self.dfDecisonVariables["variable_type"][i]
+            decUpperBound = self.dfDecisonVariables["upper_bound"][i]
+            decLowerBound = self.dfDecisonVariables["lower_bound"][i]
+            if oIndividual[i] < decLowerBound:
+                oIndividual[i] = decLowerBound
+            elif oIndividual[i] > decUpperBound:
+                oIndividual[i] = decUpperBound
+                        
+            if eVariableType == variable_types.integer:
+                oIndividual[i]= int(oIndividual[i])
+        
+        oIndividual.fitness.values
             
             
     def optimize(self, toolbox):
         self.generate_individual(toolbox)
         
         toolbox.register("population", tools.initRepeat, list ,toolbox.individual)
-        toolbox.register("select", tools.selTournament, tournsize=self.tournement_size)
+        toolbox.register("select", tools.selTournament, tournsize=self.iPopulationSize)
         toolbox.register("crossover", self.crossover)
         toolbox.register("mutate", self.mutate)
         
-        oPopulation = toolbox.population(self.population_size)
+        oPopulation = toolbox.population(self.iPopulationSize)
         
         oOutputFile = Result_Logs.open_output_file(self.dfDecisonVariables["label"],self.dfObjectiveFunctions["label"] )
         
@@ -133,9 +132,9 @@ class genetic_algorithm():
         for ind, fit in zip(oPopulation, aFitnesses):
             ind.fitness.values = (fit,)
             
-        
+            
         iRunId = 1
-        for i in range(self.max_number_of_generations):
+        for i in range(self.iMaxNumberOfGenerations):
             # Select the next generation individuals
             offspring = toolbox.select(oPopulation, len(oPopulation))
             # Clone the selected individuals
@@ -162,21 +161,29 @@ class genetic_algorithm():
                 Result_Logs.log_to_output_file(oOutputFile, iRunId, i+1,ind, ind.fitness.values)
                 iRunId = iRunId + 1
                 
-                   
-        best_ind = tools.selBest(oPopulation, 1)[0]
+            aBestInd = tools.selBest(oPopulation, 1)[0]
+            
+            iOccurances = oPopulation.count(aBestInd)
+            
+            if iOccurances/self.iPopulationSize >= self.decSimilarityRatio:
+                break
+    
+        Result_Logs.log_to_output_file(oOutputFile, "OPTIMUM RESULT", "", aBestInd, aBestInd.fitness.values)
                 
-        return best_ind
+        return aBestInd
     
 class particle_swarm_optimization():
-    def __init__(self,fitness_function, dfObjectiveFunctions,dfDecisonVariables, population_size = 2, max_number_of_generations = 5, inertia_weight = 0.2, exploration_coefficient = 0.4, explotation_coefficient = 0.4):
-        self.population_size = population_size        
-        self.max_number_of_generations = max_number_of_generations
-        self.inertia_weight = inertia_weight
-        self.exploration_coefficient = exploration_coefficient
-        self.explotation_coefficient = explotation_coefficient
+    def __init__(self,fitness_function, dfObjectiveFunctions,dfDecisonVariables, iMaxNumberOfGenerations,iPopulationSize, decSimilarityRatio, decInertiaWeight, decExplorationCoefficient, decExplotationCoefficient):
         self.fitness_function = fitness_function
-        self.dfDecisonVariables = dfDecisonVariables
         self.dfObjectiveFunctions = dfObjectiveFunctions
+        self.dfDecisonVariables = dfDecisonVariables
+        self.iMaxNumberOfGenerations = iMaxNumberOfGenerations
+        self.iPopulationSize = iPopulationSize      
+        self.decSimilarityRatio = decSimilarityRatio
+        self.decInertiaWeight = decInertiaWeight
+        self.decExplorationCoefficient = decExplorationCoefficient
+        self.decExplotationCoefficient = decExplotationCoefficient
+
         
     
     def generate_particle(self, toolbox):
@@ -218,23 +225,25 @@ class particle_swarm_optimization():
 
     def update_particle(self, oParticle, oParticleGlobalBest):
         aRandom1 = np.random.uniform(0,1, len(oParticle))
-        aCoeffCognitiveComponent = self.exploration_coefficient * aRandom1
+        aCoeffCognitiveComponent = self.decExplorationCoefficient * aRandom1
         
         aDistanceToPersonalBest = map(operator.sub, oParticle.aPersonalBest, oParticle)
         aCognitiveComponent = map(operator.mul, aCoeffCognitiveComponent, aDistanceToPersonalBest)
         
         aRandom2 = np.random.uniform(0,1, len(oParticle))
-        aCoeffSocialComponent = self.explotation_coefficient * aRandom2
+        aCoeffSocialComponent = self.decExplotationCoefficient * aRandom2
         
         aDistanceToGlobalBest = map(operator.sub, oParticleGlobalBest, oParticle)
         aSocialComponent = map(operator.mul, aCoeffSocialComponent, aDistanceToGlobalBest)
         
         oParticle.aSpeed = list(map(operator.add, oParticle.aSpeed, map(operator.add, aCognitiveComponent, aSocialComponent)))
         
-
+        # Add speed limit control logics
+        
         oParticle[:] = list(map(operator.add, oParticle, oParticle.aSpeed))
         
         for i in range(len(oParticle)):
+            
             eVariableType = self.dfDecisonVariables["variable_type"][i]
             decUpperBound = self.dfDecisonVariables["upper_bound"][i]
             decLowerBound = self.dfDecisonVariables["lower_bound"][i]
@@ -256,11 +265,11 @@ class particle_swarm_optimization():
         
         oOutputFile = Result_Logs.open_output_file(self.dfDecisonVariables["label"],self.dfObjectiveFunctions["label"] )
         
-        aPopulation = toolbox.population(self.population_size)
+        aPopulation = toolbox.population(self.iPopulationSize)
         oParticleGlobalBest = list
         
         iRunId = 1
-        for i in range(self.max_number_of_generations):
+        for i in range(self.iMaxNumberOfGenerations):
             for oParticle in aPopulation:
 
                 oParticle.fitness.values = (toolbox.evaluate(oParticle),)
@@ -286,6 +295,8 @@ class particle_swarm_optimization():
                 iRunId = iRunId + 1
             for oParticle in aPopulation:
                 toolbox.update(oParticle, oParticleGlobalBest)
+                
+        Result_Logs.log_to_output_file(oOutputFile, "OPTIMUM RESULT", "", oParticleGlobalBest, oParticleGlobalBest.fitness.values)
                                 
         return oParticleGlobalBest
     
@@ -316,3 +327,5 @@ class Result_Logs():
         sValues = sValues + ';' + ';'.join(str(x) for x in aFitnessValues)
         
         oOutputFile.write('\n' + sValues)
+        
+        
