@@ -124,19 +124,19 @@ class genetic_algorithm():
         toolbox.register("crossover", self.crossover)
         toolbox.register("mutate", self.mutate)
         
-        oPopulation = toolbox.population(self.iPopulationSize)
+        aPopulation = toolbox.population(self.iPopulationSize)
         
         oOutputFile = Result_Logs.open_output_file(self.dfDecisonVariables["label"],self.dfObjectiveFunctions["label"] )
         
-        aFitnesses = list(map(toolbox.evaluate, oPopulation))
-        for ind, fit in zip(oPopulation, aFitnesses):
+        aFitnesses = list(map(toolbox.evaluate, aPopulation))
+        for ind, fit in zip(aPopulation, aFitnesses):
             ind.fitness.values = (fit,)
             
             
         iRunId = 1
         for i in range(self.iMaxNumberOfGenerations):
             # Select the next generation individuals
-            offspring = toolbox.select(oPopulation, len(oPopulation))
+            offspring = toolbox.select(aPopulation, len(aPopulation))
             # Clone the selected individuals
             offspring = list(map(toolbox.clone, offspring))
             
@@ -154,18 +154,18 @@ class genetic_algorithm():
                 ind.fitness.values = (fit,)
                 
             # The population is entirely replaced by the offspring
-            oPopulation[:] = offspring
+            aPopulation[:] = offspring
             
             # Gather all the aFitnesses in one list and print the stats
-            for ind in oPopulation:
+            for ind in aPopulation:
                 Result_Logs.log_to_output_file(oOutputFile, iRunId, i+1,ind, ind.fitness.values)
                 iRunId = iRunId + 1
                 
-            aBestInd = tools.selBest(oPopulation, 1)[0]
+            aBestInd = tools.selBest(aPopulation, 1)[0]
             
-            iOccurances = oPopulation.count(aBestInd)
+            iBestOccurance = aPopulation.count(aBestInd)
             
-            if iOccurances/self.iPopulationSize >= self.decSimilarityRatio:
+            if iBestOccurance/self.iPopulationSize >= self.decSimilarityRatio:
                 break
     
         Result_Logs.log_to_output_file(oOutputFile, "OPTIMUM RESULT", "", aBestInd, aBestInd.fitness.values)
@@ -173,7 +173,7 @@ class genetic_algorithm():
         return aBestInd
     
 class particle_swarm_optimization():
-    def __init__(self,fitness_function, dfObjectiveFunctions,dfDecisonVariables, iMaxNumberOfGenerations,iPopulationSize, decSimilarityRatio, decInertiaWeight, decExplorationCoefficient, decExplotationCoefficient):
+    def __init__(self,fitness_function, dfObjectiveFunctions,dfDecisonVariables, iMaxNumberOfGenerations,iPopulationSize, decSimilarityRatio, decInertiaWeight, decExplotationCoefficient, decExplorationCoefficient):
         self.fitness_function = fitness_function
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariables = dfDecisonVariables
@@ -181,8 +181,8 @@ class particle_swarm_optimization():
         self.iPopulationSize = iPopulationSize      
         self.decSimilarityRatio = decSimilarityRatio
         self.decInertiaWeight = decInertiaWeight
-        self.decExplorationCoefficient = decExplorationCoefficient
         self.decExplotationCoefficient = decExplotationCoefficient
+        self.decExplorationCoefficient = decExplorationCoefficient
 
         
     
@@ -225,38 +225,46 @@ class particle_swarm_optimization():
 
     def update_particle(self, oParticle, oParticleGlobalBest):
         aRandom1 = np.random.uniform(0,1, len(oParticle))
-        aCoeffCognitiveComponent = self.decExplorationCoefficient * aRandom1
+        aCoeffCognitiveComponent = self.decExplotationCoefficient * aRandom1
         
         aDistanceToPersonalBest = map(operator.sub, oParticle.aPersonalBest, oParticle)
-        aCognitiveComponent = map(operator.mul, aCoeffCognitiveComponent, aDistanceToPersonalBest)
+        aCognitiveComponent = list(map(operator.mul, aCoeffCognitiveComponent, aDistanceToPersonalBest))
         
         aRandom2 = np.random.uniform(0,1, len(oParticle))
-        aCoeffSocialComponent = self.decExplotationCoefficient * aRandom2
+        aCoeffSocialComponent = self.decExplorationCoefficient * aRandom2
         
         aDistanceToGlobalBest = map(operator.sub, oParticleGlobalBest, oParticle)
-        aSocialComponent = map(operator.mul, aCoeffSocialComponent, aDistanceToGlobalBest)
+        aSocialComponent = list(map(operator.mul, aCoeffSocialComponent, aDistanceToGlobalBest))
         
-        oParticle.aSpeed = list(map(operator.add, oParticle.aSpeed, map(operator.add, aCognitiveComponent, aSocialComponent)))
-        
-        # Add speed limit control logics
-        
-        oParticle[:] = list(map(operator.add, oParticle, oParticle.aSpeed))
-        
+
         for i in range(len(oParticle)):
-            
             eVariableType = self.dfDecisonVariables["variable_type"][i]
             decUpperBound = self.dfDecisonVariables["upper_bound"][i]
             decLowerBound = self.dfDecisonVariables["lower_bound"][i]
-
+            decStepSizeLower = self.dfDecisonVariables["step_size_lower"][i]
+            decStepSizeUpper = self.dfDecisonVariables["step_size_upper"][i]         
+            
+            decSpeedValue = oParticle.aSpeed[i] + aCognitiveComponent[i] + aSocialComponent[i]
+            if decSpeedValue < decStepSizeLower :
+                oParticle.aSpeed[i] = decStepSizeLower
+            elif decSpeedValue > decStepSizeUpper:
+                oParticle.aSpeed[i] = decStepSizeUpper
+            
+            if eVariableType == variable_types.integer:
+                oParticle.aSpeed[i] = int(oParticle.aSpeed[i])
+            
+            
+            oParticle[i] = oParticle[i] + oParticle.aSpeed[i]
+            
+            
             decValue = oParticle[i]
             if decValue < decLowerBound:
                 oParticle[i] = decLowerBound
             elif decValue > decUpperBound:
                 oParticle[i] = decUpperBound
             
-            decValue = oParticle[i]
             if eVariableType == variable_types.integer:
-                oParticle[i] = int(decValue)
+                oParticle[i] = int(oParticle[i])
 
     def optimize(self, toolbox):
         toolbox.register("particle", self.generate_particle, toolbox)
@@ -295,6 +303,11 @@ class particle_swarm_optimization():
                 iRunId = iRunId + 1
             for oParticle in aPopulation:
                 toolbox.update(oParticle, oParticleGlobalBest)
+                
+                
+            iBestOccurance = aPopulation.count(oParticleGlobalBest)
+            if iBestOccurance/self.iPopulationSize >= self.decSimilarityRatio:
+                break
                 
         Result_Logs.log_to_output_file(oOutputFile, "OPTIMUM RESULT", "", oParticleGlobalBest, oParticleGlobalBest.fitness.values)
                                 
