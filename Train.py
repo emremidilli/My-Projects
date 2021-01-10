@@ -116,50 +116,54 @@ def create_directory(model_id):
 
 
 def evaluate_fitness(individual, o_model_neural_attention, scaled_input_train,scaled_target_train,scaled_input_test, scaled_target_test):
-    epoch_size = individual[0]
-    batch_size = individual[1]
-    number_of_hidden_neuron = individual[2]
-    dropout_rate_encoder = individual[3]
-    dropout_rate_decoder = individual[4]
-    recurrent_dropout_rate_encoder = individual[5]
-    recurrent_dropout_rate_decoder = individual[6]
-    learning_rate = individual[7]
-    momentum_rate = individual[8]
+    iEpochSize = 5
+    iBatchSize = individual[0]
+    iHiddenSize = individual[1]
+    decDropoutRateEncoder = individual[2]
+    decDropoutRateDecoder = individual[3]
+    decRecurrentDropoutRateEncoder = individual[4]
+    decRecurrentDropoutRateDecoder = individual[5]
+    decLearningRate = individual[6]
+    decMomentumRate = individual[7]
     
     actual = scaled_target_test
 
-    big_m = 999999
-    
-    
-    if batch_size > actual.shape[0] or min(individual) <= 0 :
-        return big_m
-    else:
+    iPenalty = 999999
+    decMinimumRequiredR2= 0.90
+
+    if iBatchSize > actual.shape[0]:
+        return iPenalty
+    else:        
         o_model_neural_attention_2 = Neural_Attention_Mechanism.Neural_Attention_Mechanism(o_model_neural_attention.model_id, o_model_neural_attention.feature_size_input, o_model_neural_attention.feature_size_target, o_model_neural_attention.backward_window_length, o_model_neural_attention.forward_window_length)
-        o_model_neural_attention_2.set_hyperparameters(epoch_size, batch_size, number_of_hidden_neuron, dropout_rate_encoder, dropout_rate_decoder, recurrent_dropout_rate_encoder, recurrent_dropout_rate_decoder, learning_rate, momentum_rate)
+        o_model_neural_attention_2.set_hyperparameters(iEpochSize, iBatchSize, iHiddenSize, decDropoutRateEncoder, decDropoutRateDecoder, decRecurrentDropoutRateEncoder, decRecurrentDropoutRateDecoder, decLearningRate, decMomentumRate)
         o_model_neural_attention_2.train(scaled_input_train, scaled_target_train)
         prediction = o_model_neural_attention_2.predict(scaled_input_test)
-                
-        zero_indices = np.argwhere(np.all(actual[..., :] == 0, axis=0))
         
-        y_true = np.delete(actual, zero_indices, axis=1)
-        y_pred = np.delete(prediction, zero_indices, axis=1)
+        aOverallScores=[]
+        for i in range(actual.shape[1]):
+            mse, mae, r, r2, mape, count, exp_var = Calculate_Accuracy.main(actual[:,i], prediction[:,i])
+            if r2<=decMinimumRequiredR2:
+                return iPenalty
+            else:
+                aOverallScores.append(r2)
         
-        mse, mae, r, r2, mape, count, exp_var = Calculate_Accuracy.main(y_true, y_pred)
-        
-        return mae
+        print(aOverallScores)
+        return np.std(aOverallScores)
+
     
 def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scaled_target_train, scaled_input_test, scaled_target_test):
     dicDecisionVariables = {
-                        "label":["epoch_size", "batch_size", "number_of_hidden_neuron","dropout_rate_encoder","rng_dropout_rate_decoder", "recurrent_dropout_rate_encoder", "recurrent_dropout_rate_decoder", "learning_rate", "momentum_rate"],
-                        "variable_type": [Optimize.variable_types.integer,Optimize.variable_types.integer,Optimize.variable_types.integer,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal ],
-                        "lower_bound" : [1,100,10,0.1, 0.1, 0.1, 0.1, 0.001, 0.1],
-                        "upper_bound" : [10, 1000, 1000, 0.7, 0.7, 0.7, 0.7, 0.1, 0.9],
-                        "step_size_lower" : [1, 5, 5, 0.05,0.05,0.05,0.05,0.0005,0.005],
-                        "step_size_upper" : [4, 20, 20, 0.20,0.20,0.20,0.20,0.0020,0.020]
+                        "label":["iBatchSize", "iHiddenSize","decDropoutRateEncoder","decDropoutRateDecoder", "decRecurrentDropoutRateEncoder", "decRecurrentDropoutRateDecoder", "decLearningRate", "decMomentumRate"],
+                        "variable_type": [Optimize.variable_types.integer,Optimize.variable_types.integer,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal,Optimize.variable_types.decimal ],
+                        "lower_bound" : [128,10,0, 0, 0, 0, 0.0001, 0.1],
+                        "upper_bound" : [512, 200, 0.3, 0.3, 0.3, 0.3, 0.01, 0.9],
+                        "step_size_lower" : [5, 5, 0.05,0.05,0.05,0.05,0.0005,0.005],
+                        "step_size_upper" : [20, 20, 0.20,0.20,0.20,0.20,0.0020,0.020]
                         }
     
+    
     dicObjectiveFunctions =  {
-                        "label":["Mean Absolute Error"]
+                        "label":["Fitness"]
                         }
     
     
@@ -171,23 +175,24 @@ def get_optimum_configuration(o_model_neural_attention,scaled_input_train, scale
     toolbox = base.Toolbox()
     toolbox.register("evaluate", evaluate_fitness, o_model_neural_attention = o_model_neural_attention,scaled_input_train = scaled_input_train,scaled_target_train = scaled_target_train,scaled_input_test= scaled_input_test, scaled_target_test= scaled_target_test)
     
-    # particle_swarm_optimization = Optimize.particle_swarm_optimization(creator.Fitness_Function,dfObjectiveFunctions, dfDecisonVariables)
-    # optimum_result = particle_swarm_optimization.optimize(toolbox)
+    particle_swarm_optimization = Optimize.particle_swarm_optimization(creator.Fitness_Function,dfObjectiveFunctions,dfDecisonVariables, 100,10, 0.75, 0.30, 0.40, 0.30)
     
-    genetic_algorithm = Optimize.genetic_algorithm(creator.Fitness_Function,dfObjectiveFunctions, dfDecisonVariables)
-    optimum_result = genetic_algorithm.optimize(toolbox)
+    optimum_result = particle_swarm_optimization.optimize(toolbox)
+    
+    # genetic_algorithm = Optimize.genetic_algorithm(creator.Fitness_Function,dfObjectiveFunctions, dfDecisonVariables,100, 10, 0.75,0.5,0.05, 0.4)
+    # optimum_result = genetic_algorithm.optimize(toolbox)
 
-    epoch_size = optimum_result[0]
-    batch_size = optimum_result[1]
-    number_of_hidden_neuron= optimum_result[2]
-    dropout_rate_encoder= optimum_result[3]
-    dropout_rate_decoder= optimum_result[4]
-    recurrent_dropout_rate_encoder= optimum_result[5]
-    recurrent_dropout_rate_decoder= optimum_result[6]
-    learning_rate= optimum_result[7]
-    momentum_rate= optimum_result[8]
+    iEpochSize = 5
+    iBatchSize = optimum_result[0]
+    iHiddenSize= optimum_result[1]
+    decDropoutRateEncoder= optimum_result[2]
+    decDropoutRateDecoder= optimum_result[3]
+    decRecurrentDropoutRateEncoder= optimum_result[4]
+    decRecurrentDropoutRateDecoder= optimum_result[5]
+    decLearningRate= optimum_result[6]
+    decMomentumRate= optimum_result[7]
     
-    o_model_neural_attention.set_hyperparameters(epoch_size, batch_size, number_of_hidden_neuron, dropout_rate_encoder, dropout_rate_decoder, recurrent_dropout_rate_encoder, recurrent_dropout_rate_decoder, learning_rate, momentum_rate )
+    o_model_neural_attention.set_hyperparameters(iEpochSize, iBatchSize, iHiddenSize, decDropoutRateEncoder, decDropoutRateDecoder, decRecurrentDropoutRateEncoder, decRecurrentDropoutRateDecoder, decLearningRate, decMomentumRate )
 
     return o_model_neural_attention
 
