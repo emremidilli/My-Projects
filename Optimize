@@ -29,7 +29,7 @@ class variable_types(enum.Enum):
 
 
 class genetic_algorithm():
-    def __init__(self, fitness_function,dfObjectiveFunctions, dfDecisonVariables, iMaxNumberOfGenerations, iPopulationSize, decSimilarityRatio, decCrossoverRate,decMutationRate, decMutationCrowdingDegree):
+    def __init__(self, fitness_function,dfObjectiveFunctions, dfDecisonVariables, iMaxNumberOfGenerations = 50, iPopulationSize = 5 , decSimilarityRatio = 0.75, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
         self.fitness_function = fitness_function
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariables = dfDecisonVariables
@@ -52,13 +52,15 @@ class genetic_algorithm():
             decLowerBound = oRow["lower_bound"]
             decUpperBound = oRow["upper_bound"]
             toolbox.register(sLabel, variable_types.convert_to_random, eVariableType, decLowerBound, decUpperBound)
-
+            
+            
             if sGeneOrder == "":
                 sGeneOrder = "toolbox."+sLabel
             else:
                 sGeneOrder = sGeneOrder + "," + "toolbox."+sLabel
             
         toolbox.register("individual", tools.initCycle,creator.Individual, eval(sGeneOrder))
+        
         
         
     def crossover(self, oIndividual1, oIndividual2):
@@ -73,7 +75,7 @@ class genetic_algorithm():
         
             oIndividual1[cxpoint1:cxpoint2], oIndividual2[cxpoint1:cxpoint2] = oIndividual2[cxpoint1:cxpoint2].copy(), oIndividual1[cxpoint1:cxpoint2].copy()
                 
-                
+            
             for i in range(len(oIndividual1)):
                 eVariableType = self.dfDecisonVariables["variable_type"][i]
                 decUpperBound = self.dfDecisonVariables["upper_bound"][i]
@@ -135,6 +137,7 @@ class genetic_algorithm():
             
         iRunId = 1
         for i in range(self.iMaxNumberOfGenerations):
+            print(i)
             # Select the next generation individuals
             offspring = toolbox.select(aPopulation, len(aPopulation))
             # Clone the selected individuals
@@ -183,9 +186,9 @@ class particle_swarm_optimization():
         self.decInertiaWeight = decInertiaWeight
         self.decExplotationCoefficient = decExplotationCoefficient
         self.decExplorationCoefficient = decExplorationCoefficient
+        
 
         
-    
     def generate_particle(self, toolbox):
         creator.create("Particle", list, fitness = self.fitness_function, aSpeed = list ,aSpeedMin = list, aSpeedMax = list, aPersonalBest = list, aLabel = list)
         
@@ -197,6 +200,7 @@ class particle_swarm_optimization():
             eVariableType = oRow["variable_type"]
             decLowerBound = oRow["lower_bound"]
             decUpperBound = oRow["upper_bound"]
+            
             decStepSizeLower = oRow["step_size_lower"]
             decStepSizeUpper = oRow["step_size_upper"]
             
@@ -222,8 +226,9 @@ class particle_swarm_optimization():
         return oParticle
     
     
-
     def update_particle(self, oParticle, oParticleGlobalBest):
+        print("Before Update" + str(oParticle))
+        
         aRandom1 = np.random.uniform(0,1, len(oParticle))
         aCoeffCognitiveComponent = self.decExplotationCoefficient * aRandom1
         
@@ -236,7 +241,6 @@ class particle_swarm_optimization():
         aDistanceToGlobalBest = map(operator.sub, oParticleGlobalBest, oParticle)
         aSocialComponent = list(map(operator.mul, aCoeffSocialComponent, aDistanceToGlobalBest))
         
-
         for i in range(len(oParticle)):
             eVariableType = self.dfDecisonVariables["variable_type"][i]
             decUpperBound = self.dfDecisonVariables["upper_bound"][i]
@@ -244,15 +248,15 @@ class particle_swarm_optimization():
             decStepSizeLower = self.dfDecisonVariables["step_size_lower"][i]
             decStepSizeUpper = self.dfDecisonVariables["step_size_upper"][i]         
             
+            
             decSpeedValue = oParticle.aSpeed[i] + aCognitiveComponent[i] + aSocialComponent[i]
-            if decSpeedValue < decStepSizeLower :
-                oParticle.aSpeed[i] = decStepSizeLower
-            elif decSpeedValue > decStepSizeUpper:
-                oParticle.aSpeed[i] = decStepSizeUpper
+            # if decSpeedValue < decStepSizeLower :
+            #     oParticle.aSpeed[i] = decStepSizeLower
+            # elif decSpeedValue > decStepSizeUpper:
+            #     oParticle.aSpeed[i] = decStepSizeUpper
             
-            if eVariableType == variable_types.integer:
-                oParticle.aSpeed[i] = int(oParticle.aSpeed[i])
-            
+            # if eVariableType == variable_types.integer:
+            #     oParticle.aSpeed[i] = int(oParticle.aSpeed[i])
             
             oParticle[i] = oParticle[i] + oParticle.aSpeed[i]
             
@@ -265,6 +269,10 @@ class particle_swarm_optimization():
             
             if eVariableType == variable_types.integer:
                 oParticle[i] = int(oParticle[i])
+        
+        
+                
+        print("After Update" + str(oParticle))
 
     def optimize(self, toolbox):
         toolbox.register("particle", self.generate_particle, toolbox)
@@ -282,6 +290,8 @@ class particle_swarm_optimization():
 
                 oParticle.fitness.values = (toolbox.evaluate(oParticle),)
                 
+                print("particle: " + str(iRunId+1))
+                
                 Result_Logs.log_to_output_file(oOutputFile, iRunId, i+1,oParticle, oParticle.fitness.values)
                 
                 if not oParticle.aPersonalBest:
@@ -298,7 +308,9 @@ class particle_swarm_optimization():
                 else:
                     if oParticleGlobalBest.fitness < oParticle.fitness:
                        oParticleGlobalBest = creator.Particle(oParticle)
-                       oParticleGlobalBest.fitness.values = oParticle.fitness.values  
+                       oParticleGlobalBest.fitness.values = oParticle.fitness.values
+                       
+                print("global best: " + str(oParticleGlobalBest.fitness.values))
 
                 iRunId = iRunId + 1
             for oParticle in aPopulation:
