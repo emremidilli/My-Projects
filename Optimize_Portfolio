@@ -25,9 +25,7 @@ from datetime import datetime
 
 
 class PortfolioManagement():
-    
-    gc_i_BIG_M = 9999999999999999999999
-    
+        
     # Description: Constructor of class
     # Parameters:
         # dfExpectedPrices: Columns are forward time window, rows are number of financial products
@@ -116,31 +114,13 @@ class PortfolioManagement():
         return aPopulationX, aPopulationY
 
     
-    def bIsPositionAmountConstraintSatisfied(self, aAmountsX, aPositionsY):
-        aDiff = aAmountsX - self.gc_i_BIG_M * abs(aPositionsY)
-        
-        for decDiff in aDiff:
-            if decDiff > 0:
-                return False
-        
-        return True
-        
-    
     def dfEvaluateFitness(self, aIndividualX, aIndividualY):
         
         aAmountsX =  aIndividualX
         aPositionsY = aIndividualY
         
-        # bPositionAmountConstraintSatisfied = self.bIsPositionAmountConstraintSatisfied(aAmountsX, aPositionsY)
-        
-        # # print(bPositionAmountConstraintSatisfied)
-        
-        # if bPositionAmountConstraintSatisfied == False:
-        #     return self.gc_i_BIG_M * -1
-        # else:
-        #     return self.gc_i_BIG_M
-            
-        return 1
+        return np.random.random()
+    
     
     
     def Main(self):
@@ -207,14 +187,18 @@ class GeneticAlgorithm():
     
     def aAdjustPopulation(self, aPopulationX,aPopulationY):
         for i in range(len(aPopulationX)):
-            decIndividualX = aPopulationX[i]
-            iIndividualY = aPopulationY[i]
+            aIndividualX = aPopulationX[i]
+            aIndividualY = aPopulationY[i]
             
-            if iIndividualY == 0:
-                aPopulationX[i] = 0
-            else:
-                if decIndividualX == 0:
-                    aPopulationY[i] = 0
+            for j in range(len(aIndividualX)):
+                decX = aIndividualX[j]
+                iY = aIndividualY[j]
+                            
+                if iY == 0:
+                    aPopulationX[i][j] = 0
+                else:
+                    if decX == 0:
+                        aPopulationY[i][j] = 0
                     
         return aPopulationX, aPopulationY
       
@@ -259,17 +243,14 @@ class GeneticAlgorithm():
         toolbox.register("crossover", self.crossover)
         toolbox.register("mutate", self.mutate)
         
-        
         toolbox.register("population_x", tools.initRepeat, list ,toolbox.x)
         toolbox.register("population_y", tools.initRepeat, list ,toolbox.y)
         
         aPopulationX = toolbox.population_x(self.iPopulationSize)
         aPopulationY = toolbox.population_y(self.iPopulationSize)
         
-
         aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
         
-
         oOutputFile = Result_Logs.open_output_file(self.dfDecisonVariables["label"],self.dfObjectiveFunctions["label"] )
         
         aFitnesses = list(map(toolbox.evaluate, aPopulationX, aPopulationY))
@@ -285,14 +266,11 @@ class GeneticAlgorithm():
         iRunId = 1
         for i in range(self.iMaxNumberOfGenerations):
             print("Generation #: " + str(i))
-
            
             aOffspringX, aOffspringY = toolbox.select(aPopulationX, aPopulationY)
 
-                            
             aOffspringX = list(map(toolbox.clone, aOffspringX)) # Clone the selected individuals
             aOffspringY = list(map(toolbox.clone, aOffspringY)) # Clone the selected individuals
-            
             
             for aChild1X, aChild2X, aChild1Y,aChild2Y in zip(aOffspringX[::2], aOffspringX[1::2], aOffspringY[::2], aOffspringY[1::2]):            
                 toolbox.crossover(aChild1X, aChild2X, aChild1Y, aChild2Y)
@@ -305,7 +283,6 @@ class GeneticAlgorithm():
             #     toolbox.mutate(aMutantY)
                 
             
-
             aOffspringX, aOffspringY = self.aAdjustPopulation(aOffspringX, aOffspringY)
             
             aInvalidIndividualsX = [ind for ind in aOffspringX if not ind.fitness.valid] # Evaluate the individuals with an invalid fitness
@@ -322,12 +299,18 @@ class GeneticAlgorithm():
             
             aPopulationX[:] = aOffspringX
             aPopulationY[:] = aOffspringY 
-
-            aPopulationFull = aPopulationX + aPopulationY
             
-
-            for ind in aPopulationFull:
-                Result_Logs.log_to_output_file(oOutputFile, iRunId, i+1,ind, ind.fitness.values)
+            aPopulationFull = []
+            
+            aPopulationFull = np.hstack((aPopulationX,aPopulationY))
+                        
+            
+            for iIndex in range(len(aPopulationX)):
+                aIndX = aPopulationX[iIndex]
+                aIndY = aPopulationY[iIndex]
+                aIndFull = aIndX + aIndY
+                
+                Result_Logs.log_to_output_file(oOutputFile, iRunId, i+1,aIndFull, aIndX.fitness.values)
                 iRunId = iRunId + 1
                 
             aBestIndX = tools.selBest(aPopulationX, 1)[0]
@@ -396,9 +379,7 @@ def dfGetInputs():
         dfExpectedPrices.insert(dfExpectedPrices.shape[1], sTimeStep, []) 
     
     
-    
     for iIndex, iRow in dfFinancialProducts.iterrows():
-        
         aRandomPrices = []
         
         for jIndex, jRow in dfForwardTimeSteps.iterrows():    
