@@ -38,10 +38,48 @@ class PortfolioManagement():
         self.dfForwardTimeSteps = dfForwardTimeSteps
         self.dfFinancialProducts = dfFinancialProducts
         self.decInitialCapital = decInitialCapital
+        self.dfIndices = self.dfGetIndices()
+        self.aPriceDiffs = self.aGetPriceDiffs()
         
-        
-    def dfGetDecisionVariables(self):
+    
+    def dfGetIndices(self):
+        aI = []
+        aJ = []
+        aK = []
+                      
+        for iIndex, iRow in self.dfFinancialProducts.iterrows():
+            for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
+                jTimeStep =jRow["TimeStep"]
+                for kIndex, kRow in self.dfForwardTimeSteps.iterrows():
+                    kTimeStep = kRow["TimeStep"]
+                    if jTimeStep <= kTimeStep:
+                        aI.append(iIndex)
+                        aJ.append(jIndex)
+                        aK.append(kIndex)
 
+        dicIndices = {
+                    "i":aI,
+                    "j":aJ,
+                    "k":aK,
+                    }        
+        
+        dfIndices = pd.DataFrame(data=dicIndices)    
+        
+        return dfIndices        
+
+
+    def aGetPriceDiffs(self):
+        aPriceDiffs = []
+        for iIndex, aRow in self.dfIndices.iterrows():
+            i = aRow["i"]
+            j = aRow["j"]
+            k = aRow["k"]
+            decPriceDiff = self.dfExpectedPrices.iloc[i][k+1] - self.dfExpectedPrices.iloc[i][j+1]
+            aPriceDiffs.append(decPriceDiff)
+
+        return aPriceDiffs
+       
+    def dfGetDecisionVariables(self):
         aTypes = []
         aLabels = []
         aLowerBounds = []
@@ -58,7 +96,6 @@ class PortfolioManagement():
                 sVariableLetter = "y"
                 
             for iIndex, iRow in self.dfFinancialProducts.iterrows():
-
                 for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
                     jTimeStep =jRow["TimeStep"]
                     for kIndex, kRow in self.dfForwardTimeSteps.iterrows():
@@ -72,6 +109,7 @@ class PortfolioManagement():
                                 decUpperStepSize = self.decInitialCapital * 0.001
                                 decLowerBound = 0
                                 decLowerStepSize = 0
+                            
                             else:
                                 decUpperBound = 1
                                 decUpperStepSize = 1
@@ -85,6 +123,8 @@ class PortfolioManagement():
                             aLowerStepSizes.append(decLowerStepSize)
                             aUpperStepSizes.append(decUpperStepSize)
                             
+
+                            
         dicDecisionVariables = {
                     "label":aLabels,
                     "variable_type": aTypes,
@@ -94,6 +134,7 @@ class PortfolioManagement():
                     "step_size_upper" : aUpperStepSizes
                     }
 
+        
 
         dfDecisonVariables = pd.DataFrame(data=dicDecisionVariables)       
         return dfDecisonVariables
@@ -107,19 +148,72 @@ class PortfolioManagement():
         dfObjectiveFunctions = pd.DataFrame(data=dicObjectiveFunctions)
         
         return dfObjectiveFunctions
-    
-    
-    def EnsureConstraints(aPopulationX, aPopulationY):
-        
-        return aPopulationX, aPopulationY
 
+
+
+    def aCalculateReturns(self,aAmountsX, aPositionsY):
+        aReturn = []
+        for i in range(len(aAmountsX)):
+            decReturn = aAmountsX[i] * aPositionsY[i]
+            decReturn = self.aPriceDiffs[i] * aPositionsY[i]
+            aReturn.append(decReturn)
+        return aReturn
+    
+
+    def aCalculateCapitals(self, aReturns, aAmounts):
+        
+        aCapitals = np.zeros(self.dfForwardTimeSteps.shape[0])
+        
+        for iIndex, iRow in self.dfForwardTimeSteps.iterrows():
+            
+            decTotalReturn = 0
+            decTotalAmount = 0
+            
+            for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
+                
+                for kIndex, kRow in self.dfFinancialProducts.iterrows():
+                    
+                    dfIndicAmounts = self.dfIndices[(self.dfIndices.i == kIndex) & (self.dfIndices.j == iIndex) & (self.dfIndices.k == jIndex)]
+                    dfIndicReturns = self.dfIndices[(self.dfIndices.i == kIndex) & (self.dfIndices.j == jIndex) & (self.dfIndices.k == iIndex)]
+                    
+                    if dfIndicReturns.empty == False:
+                        iIndiceReturn = dfIndicReturns.index[0]
+                        decTotalReturn = decTotalReturn + aReturns[iIndiceReturn]
+                    
+                    if dfIndicAmounts.empty == False:
+                        iIndiceAmount = dfIndicAmounts.index[0]
+                        decTotalAmount = decTotalAmount + aAmounts[iIndiceAmount]
+                        
+                                           
+            if iIndex == 0:
+                 aCapitals[iIndex] =  self.decInitialCapital +  decTotalReturn - decTotalAmount
+            else:
+                aCapitals[iIndex] =  aCapitals[iIndex - 1] +  decTotalReturn - decTotalAmount
+
+            
+        return aCapitals
+            
+            
     
     def dfEvaluateFitness(self, aIndividualX, aIndividualY):
         
-        aAmountsX =  aIndividualX
-        aPositionsY = aIndividualY
+        aAmountsX =  list(aIndividualX)
+        aPositionsY = list(aIndividualY)
         
-        return np.random.random()
+        aReturns = self.aCalculateReturns(aAmountsX , aPositionsY)
+        
+        aCapitals = self.aCalculateCapitals(aReturns, aAmountsX)
+        
+        
+        for i in range(len(aCapitals)):
+            decCapital = aCapitals[i]
+            
+            if decCapital < 0:
+                return -1
+        
+        aTotalReturn = sum(aReturns)
+        
+        return aTotalReturn
     
     
     
@@ -151,7 +245,7 @@ class variable_types(enum.Enum):
 
 class GeneticAlgorithm():
     
-    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariables, iMaxNumberOfGenerations = 50, iPopulationSize = 20, decSimilarityRatio = 0.75, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
+    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariables, iMaxNumberOfGenerations = 50, iPopulationSize = 500, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariables = dfDecisonVariables
@@ -181,7 +275,7 @@ class GeneticAlgorithm():
                     sGeneOrder = "toolbox."+sLabel
                 else:
                     sGeneOrder = sGeneOrder + "," + "toolbox."+sLabel
-            
+
         toolbox.register(sGroupOfIndividual, tools.initCycle,creator.Individual, eval(sGeneOrder))
     
     
@@ -300,11 +394,7 @@ class GeneticAlgorithm():
             aPopulationX[:] = aOffspringX
             aPopulationY[:] = aOffspringY 
             
-            aPopulationFull = []
-            
-            aPopulationFull = np.hstack((aPopulationX,aPopulationY))
-                        
-            
+           
             for iIndex in range(len(aPopulationX)):
                 aIndX = aPopulationX[iIndex]
                 aIndY = aPopulationY[iIndex]
