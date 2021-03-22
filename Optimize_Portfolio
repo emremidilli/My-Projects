@@ -40,6 +40,7 @@ class PortfolioManagement():
         self.decInitialBalance = decInitialBalance
         self.dfIndices = self.dfGetIndices()
         self.aPriceDiffs = self.aGetPriceDiffs()
+
         
     
     def dfGetIndices(self):
@@ -79,58 +80,49 @@ class PortfolioManagement():
 
         return aPriceDiffs
        
-    def dfGetDecisionVariables(self):
+        
+       
+    def dfGetDecisionVariables(self, sVariableLetter = "x",):
         aTypes = []
         aLabels = []
         aLowerBounds = []
         aUpperBounds = []
-        aLowerStepSizes = []
-        aUpperStepSizes = []
         
-        for iCounter in range(2):
-            if iCounter == 0:
-                iType = variable_types.decimal
-                sVariableLetter = "x"
-            else:
-                iType = variable_types.integer   
-                sVariableLetter = "y"
-                
-            for iIndex, iRow in self.dfFinancialProducts.iterrows():
-                for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
-                    jTimeStep =jRow["TimeStep"]
-                    for kIndex, kRow in self.dfForwardTimeSteps.iterrows():
-                        kTimeStep = kRow["TimeStep"]
+
+        if sVariableLetter == "x":
+            iType = variable_types.decimal
+        else:
+            iType = variable_types.integer   
+            
+        for iIndex, iRow in self.dfFinancialProducts.iterrows():
+            for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
+                jTimeStep =jRow["TimeStep"]
+                for kIndex, kRow in self.dfForwardTimeSteps.iterrows():
+                    kTimeStep = kRow["TimeStep"]
+                    
+                    if jTimeStep <= kTimeStep:
+                        sLabel = str(sVariableLetter) + "_" + str(iIndex) + "_" + str(jIndex) + "_" + str(kIndex)
                         
-                        if jTimeStep <= kTimeStep:
-                            sLabel = str(sVariableLetter) + "_" + str(iIndex) + "_" + str(jIndex) + "_" + str(kIndex)
+                        if sVariableLetter == "x":
+                            decUpperBound = self.decInitialBalance
+                            decLowerBound = 0
+                        else:
+                            decUpperBound = 1
+                            decLowerBound = -1
                             
-                            if iCounter == 0:
-                                decUpperBound = self.decInitialBalance
-                                decUpperStepSize = self.decInitialBalance * 0.001
-                                decLowerBound = 0
-                                decLowerStepSize = 0
                             
-                            else:
-                                decUpperBound = 1
-                                decUpperStepSize = 1
-                                decLowerBound = -1
-                                decLowerStepSize = 0
-                                
-                            aLabels.append(sLabel)
-                            aTypes.append(iType)
-                            aLowerBounds.append(decLowerBound)
-                            aUpperBounds.append(decUpperBound)
-                            aLowerStepSizes.append(decLowerStepSize)
-                            aUpperStepSizes.append(decUpperStepSize)
+                        aLabels.append(sLabel)
+                        aTypes.append(iType)
+                        aLowerBounds.append(decLowerBound)
+                        aUpperBounds.append(decUpperBound)
+
                             
 
         dicDecisionVariables = {
                     "label":aLabels,
                     "variable_type": aTypes,
                     "lower_bound" : aLowerBounds,
-                    "upper_bound" : aUpperBounds,
-                    "step_size_lower" : aLowerStepSizes,
-                    "step_size_upper" : aUpperStepSizes
+                    "upper_bound" : aUpperBounds
                     }
 
         
@@ -213,28 +205,6 @@ class PortfolioManagement():
         aBalances = self.aCalculateBalances(aReturns, aAmountsX)
         
         
-        print("self.aPriceDiffs")
-        print(self.aPriceDiffs)    
-
-
-        print("aReturns")
-        print(aReturns)
-
-        print("aAmountsX")
-        print(aAmountsX)
-        
-        print("aPositionsY")
-        print(aPositionsY)
-
-        print("aBalances")
-        print(aBalances)
-        
-                
-        print("sum(aReturns)")
-        print(sum(aReturns))
-        
-
-        
         for i in range(len(aBalances)):
             decBalance = aBalances[i]
             
@@ -262,14 +232,16 @@ class PortfolioManagement():
     
     
     def Main(self):
-        dfDecisonVariables = self.dfGetDecisionVariables()
+        dfDecisonVariablesX = self.dfGetDecisionVariables("x")
+        dfDecisonVariablesY = self.dfGetDecisionVariables("y")
+        
         dfObjectiveFunctions =  self.dfGetObjectiveFunctions()
         
         creator.create("FitnessFunction", base.Fitness, weights=(1.0,))        
         
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.dfEvaluateFitness)
-        oGeneticAlgorithm = GeneticAlgorithm(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariables)
+        oGeneticAlgorithm = GeneticAlgorithm(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
         dfOptimumResult = oGeneticAlgorithm.optimize(oToolbox)
         
         return dfOptimumResult
@@ -287,12 +259,14 @@ class variable_types(enum.Enum):
             return random.uniform(vMin, vMax)
 
 
+
 class GeneticAlgorithm():
     
-    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariables, iMaxNumberOfGenerations = 50, iPopulationSize = 50, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
+    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 50, iPopulationSize = 50, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
-        self.dfDecisonVariables = dfDecisonVariables
+        self.dfDecisonVariablesX = dfDecisonVariablesX
+        self.dfDecisonVariablesY = dfDecisonVariablesY
         self.iMaxNumberOfGenerations = iMaxNumberOfGenerations
         self.iPopulationSize = iPopulationSize
         self.decSimilarityRatio = decSimilarityRatio
@@ -301,11 +275,11 @@ class GeneticAlgorithm():
         self.decMutationCrowdingDegree = decMutationCrowdingDegree
         
     
-    def GenerateIndividual(self, toolbox, sGroupOfIndividual = "x"):
+    def GenerateIndividual(self, toolbox, dfDecisonVariables, sGroupOfIndividual):
 
         sGeneOrder = ""
         
-        for iIndex, oRow in self.dfDecisonVariables.iterrows():
+        for iIndex, oRow in dfDecisonVariables.iterrows():
             sLabel = oRow["label"]
             eVariableType = oRow["variable_type"]
             decLowerBound = oRow["lower_bound"]
@@ -315,11 +289,10 @@ class GeneticAlgorithm():
             
             sGroup = sLabel[0:1]
             
-            if sGroup == sGroupOfIndividual:
-                if sGeneOrder == "":
-                    sGeneOrder = "toolbox."+sLabel
-                else:
-                    sGeneOrder = sGeneOrder + "," + "toolbox."+sLabel
+            if sGeneOrder == "":
+                sGeneOrder = "toolbox."+sLabel
+            else:
+                sGeneOrder = sGeneOrder + "," + "toolbox."+sLabel
 
         toolbox.register(sGroupOfIndividual, tools.initCycle,creator.Individual, eval(sGeneOrder))
     
@@ -368,15 +341,15 @@ class GeneticAlgorithm():
             del aIndividual2Y.fitness.values
                 
 
-    def mutate(self, aIndividual, aUpperBounds, aLowerBounds):            
-        tools.mutPolynomialBounded(aIndividual,self.decMutationCrowdingDegree, self.dfDecisonVariables["lower_bound"].values.tolist(),self.dfDecisonVariables["upper_bound"].values.tolist(), self.decMutationRate)
-        
+    def mutate(self, aIndividual, dfDecisonVariables):            
+        tools.mutPolynomialBounded(aIndividual,self.decMutationCrowdingDegree, dfDecisonVariables["lower_bound"].values.tolist(),dfDecisonVariables["upper_bound"].values.tolist(), self.decMutationRate)
+
         
     def optimize(self, toolbox):
         creator.create("Individual", list, fitness = self.FitnessFunction)
         
-        self.GenerateIndividual(toolbox, "x")
-        self.GenerateIndividual(toolbox, "y")
+        self.GenerateIndividual(toolbox, self.dfDecisonVariablesX, "x")
+        self.GenerateIndividual(toolbox, self.dfDecisonVariablesY, "y")
         
         toolbox.register("select", self.select)
         toolbox.register("crossover", self.crossover)
@@ -390,7 +363,10 @@ class GeneticAlgorithm():
         
         aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
         
-        oOutputFile = Result_Logs.open_output_file(self.dfDecisonVariables["label"],self.dfObjectiveFunctions["label"] )
+        
+        dfBothDecisionVariableLabels = self.dfDecisonVariablesX["label"] + self.dfDecisonVariablesY["label"]
+        
+        oOutputFile = Result_Logs.open_output_file(dfBothDecisionVariableLabels,self.dfObjectiveFunctions["label"])
         
         
         aFitnesses = list(map(toolbox.evaluate, aPopulationX, aPopulationY))
@@ -403,7 +379,6 @@ class GeneticAlgorithm():
             ind.fitness.values = (fit,)
 
            
-
         iRunId = 1
         for i in range(self.iMaxNumberOfGenerations):
             print("Generation #: " + str(i))
@@ -417,11 +392,11 @@ class GeneticAlgorithm():
                 toolbox.crossover(aChild1X, aChild2X, aChild1Y, aChild2Y)
                 
             
-            # for aMutantX in aOffspringX:
-            #     toolbox.mutate(aMutantX,)
+            for aMutantX in aOffspringX:
+                toolbox.mutate(aMutantX,self.dfDecisonVariablesX)
     
-            # for aMutantY in aOffspringY:
-            #     toolbox.mutate(aMutantY)
+            for aMutantY in aOffspringY:
+                toolbox.mutate(aMutantY, self.dfDecisonVariablesY)
                 
             
             aOffspringX, aOffspringY = self.aAdjustPopulation(aOffspringX, aOffspringY)
@@ -435,18 +410,6 @@ class GeneticAlgorithm():
             for ind, fit in zip(aOffspringY, aFitnesses):
                 ind.fitness.values = (fit,)
             
-
-            # aInvalidIndividualsX = [ind for ind in aOffspringX if not ind.fitness.valid] # Evaluate the individuals with an invalid fitness
-            # aInvalidIndividualsY = [ind for ind in aOffspringY if not ind.fitness.valid] # Evaluate the individuals with an invalid fitness
-            
-            # aFitnesses = list(map(toolbox.evaluate, aInvalidIndividualsX, aInvalidIndividualsY))
-
-            # for ind, fit in zip(aInvalidIndividualsX, aFitnesses):
-            #     ind.fitness.values = (fit,) 
-
-            # for ind, fit in zip(aInvalidIndividualsY, aFitnesses):
-            #     ind.fitness.values = (fit,)
-
  
             aPopulationX[:] = aOffspringX
             aPopulationY[:] = aOffspringY 
