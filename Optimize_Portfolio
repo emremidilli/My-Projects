@@ -16,6 +16,10 @@ from datetime import datetime
 
 
 
+
+gc_s_FILE_PATH =r'C:\Users\yunus\Documents\My Project\data\EXPECTED PRICES.csv'
+
+
 # Assumtions:
     # There is only one base currency TRY
     # There can be multiple exchange rate USD/TRY, EUR/TRY, GBP/TRY etc.
@@ -71,12 +75,15 @@ class PortfolioManagement():
 
 
     def aGetPriceDiffs(self):
+        
         aPriceDiffs = []
         for iIndex, aRow in self.dfIndices.iterrows():
             i = aRow["i"]
             j = aRow["j"]
             k = aRow["k"]
-            decPriceDiff = self.dfExpectedPrices.iloc[i][k+1] - self.dfExpectedPrices.iloc[i][j+1]
+            
+
+            decPriceDiff = self.dfExpectedPrices.iloc[i][k] - self.dfExpectedPrices.iloc[i][j]
             aPriceDiffs.append(decPriceDiff)
 
         return aPriceDiffs
@@ -257,7 +264,7 @@ class variable_types(enum.Enum):
 
 class GeneticAlgorithm():
     
-    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 50, iPopulationSize = 100, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
+    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20, iPopulationSize = 50, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariablesX = dfDecisonVariablesX
@@ -467,33 +474,12 @@ def dfGetInputs():
     decInitialBalance = 150
     
     
-    dfFinancialProducts = pd.DataFrame({
-                                "FinancialProduct": ["SERIES1"],
-                                "RiskFactor":[1.0]
-                            })
+    dfExpectedPrices = pd.read_csv(gc_s_FILE_PATH, index_col=0)
     
+    dfForwardTimeSteps = pd.DataFrame(dfExpectedPrices.columns,index = None, columns = ['TimeStep'])
     
-    dfForwardTimeSteps= pd.DataFrame({
-                                "TimeStep": [1,2,3,4,5]
-                            })
+    dfFinancialProducts = pd.DataFrame(dfExpectedPrices.index)
     
-    
-    dfExpectedPrices = pd.DataFrame({})
-    
-    for iIndex, iRow in dfForwardTimeSteps.iterrows():
-        sTimeStep= iRow["TimeStep"]
-        dfExpectedPrices.insert(dfExpectedPrices.shape[1], sTimeStep, []) 
-    
-    
-    for iIndex, iRow in dfFinancialProducts.iterrows():
-        aRandomPrices = []
-        
-        for jIndex, jRow in dfForwardTimeSteps.iterrows():    
-            aRandomPrices.append(random.random())
-        
-        dfExpectedPrices = dfExpectedPrices.append(dict(zip(dfExpectedPrices.columns, aRandomPrices)), ignore_index=True)
-    
-    dfExpectedPrices = dfExpectedPrices.set_index(dfFinancialProducts["FinancialProduct"])
     
     
     return dfExpectedPrices , dfFinancialProducts , dfForwardTimeSteps, decInitialBalance
