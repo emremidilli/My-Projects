@@ -15,6 +15,7 @@ import enum
 from datetime import datetime
 
 
+
 # Assumtions:
     # There is only one base currency TRY
     # There can be multiple exchange rate USD/TRY, EUR/TRY, GBP/TRY etc.
@@ -94,27 +95,25 @@ class PortfolioManagement():
         else:
             iType = variable_types.integer   
             
-        for iIndex, iRow in self.dfFinancialProducts.iterrows():
-            for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
-                jTimeStep =jRow["TimeStep"]
-                for kIndex, kRow in self.dfForwardTimeSteps.iterrows():
-                    kTimeStep = kRow["TimeStep"]
-                    
-                    if jTimeStep <= kTimeStep:
-                        sLabel = str(sVariableLetter) + "_" + str(iIndex) + "_" + str(jIndex) + "_" + str(kIndex)
-                        
-                        if sVariableLetter == "x":
-                            decUpperBound = self.decInitialBalance
-                            decLowerBound = 0
-                        else:
-                            decUpperBound = 1
-                            decLowerBound = -1
-                            
-                            
-                        aLabels.append(sLabel)
-                        aTypes.append(iType)
-                        aLowerBounds.append(decLowerBound)
-                        aUpperBounds.append(decUpperBound)
+        for iIndex, aRow in self.dfIndices.iterrows():
+            i = aRow["i"]
+            j = aRow["j"]
+            k = aRow["k"]
+            
+            sLabel = str(sVariableLetter) + "_" + str(i) + "_" + str(j) + "_" + str(k)
+            
+            if sVariableLetter == "x":
+                decUpperBound = self.decInitialBalance
+                decLowerBound = 0
+            else:
+                decUpperBound = 1
+                decLowerBound = -1
+                
+                
+            aLabels.append(sLabel)
+            aTypes.append(iType)
+            aLowerBounds.append(decLowerBound)
+            aUpperBounds.append(decUpperBound)
 
                             
 
@@ -208,26 +207,22 @@ class PortfolioManagement():
         for i in range(len(aBalances)):
             decBalance = aBalances[i]
             
-            if decBalance < 0:
+            if decBalance < 0 :
                 return -1
-                # aNonZero = [j for j in aReturns if j != 0]
-                        
-                # decMinReturn = min(aNonZero)
-                # iIndexMinReturn = aReturns.index(decMinReturn)
-                
-                # aAmountsX[iIndexMinReturn] = 0
-                # aPositionsY[iIndexMinReturn] = 0
-                
-                
-                # self.dfEvaluateFitness(aAmountsX, aPositionsY)
-                
 
-        aTotalReturn = sum(aReturns)
+    
+        for i in range(len(aReturns)):
+            decReturn = aReturns[i]
+            
+            if  decReturn < 0:
+                return -1
+                
+                
+        decFinalBalance =aBalances[len(aBalances)-1] 
+
+        # aTotalReturn = sum(aReturns)
         
-        
-        
-        
-        return aTotalReturn
+        return decFinalBalance
     
     
     
@@ -262,7 +257,7 @@ class variable_types(enum.Enum):
 
 class GeneticAlgorithm():
     
-    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 50, iPopulationSize = 50, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
+    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 50, iPopulationSize = 100, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariablesX = dfDecisonVariablesX
@@ -287,7 +282,6 @@ class GeneticAlgorithm():
             
             toolbox.register(sLabel, variable_types.convert_to_random, eVariableType, decLowerBound, decUpperBound)
             
-            sGroup = sLabel[0:1]
             
             if sGeneOrder == "":
                 sGeneOrder = "toolbox."+sLabel
@@ -305,6 +299,7 @@ class GeneticAlgorithm():
             for j in range(len(aIndividualX)):
                 decX = aIndividualX[j]
                 iY = aIndividualY[j]
+                aIndividualY[j] = int(round(aIndividualY[j]))
                             
                 if iY == 0:
                     aPopulationX[i][j] = 0
@@ -343,8 +338,8 @@ class GeneticAlgorithm():
 
     def mutate(self, aIndividual, dfDecisonVariables):            
         tools.mutPolynomialBounded(aIndividual,self.decMutationCrowdingDegree, dfDecisonVariables["lower_bound"].values.tolist(),dfDecisonVariables["upper_bound"].values.tolist(), self.decMutationRate)
-
-        
+    
+    
     def optimize(self, toolbox):
         creator.create("Individual", list, fitness = self.FitnessFunction)
         
@@ -364,8 +359,10 @@ class GeneticAlgorithm():
         aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
         
         
-        dfBothDecisionVariableLabels = self.dfDecisonVariablesX["label"] + self.dfDecisonVariablesY["label"]
-        
+        dfLabelsX =  self.dfDecisonVariablesX["label"] 
+        dfLabelsY =  self.dfDecisonVariablesY["label"] 
+        dfBothDecisionVariableLabels = dfLabelsX.append(dfLabelsY)
+                
         oOutputFile = Result_Logs.open_output_file(dfBothDecisionVariableLabels,self.dfObjectiveFunctions["label"])
         
         
@@ -385,13 +382,12 @@ class GeneticAlgorithm():
            
             aOffspringX, aOffspringY = toolbox.select(aPopulationX, aPopulationY)
 
-            aOffspringX = list(map(toolbox.clone, aOffspringX)) # Clone the selected individuals
-            aOffspringY = list(map(toolbox.clone, aOffspringY)) # Clone the selected individuals
+            aOffspringX = list(map(toolbox.clone, aOffspringX)) 
+            aOffspringY = list(map(toolbox.clone, aOffspringY))
             
             for aChild1X, aChild2X, aChild1Y,aChild2Y in zip(aOffspringX[::2], aOffspringX[1::2], aOffspringY[::2], aOffspringY[1::2]):            
                 toolbox.crossover(aChild1X, aChild2X, aChild1Y, aChild2Y)
                 
-            
             for aMutantX in aOffspringX:
                 toolbox.mutate(aMutantX,self.dfDecisonVariablesX)
     
