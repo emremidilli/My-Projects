@@ -11,6 +11,7 @@ import numpy as np
 from deap import base
 from deap import creator
 from deap import tools
+import operator
 import enum
 from datetime import datetime
 
@@ -226,8 +227,6 @@ class PortfolioManagement():
                 
                 
         decFinalBalance =aBalances[len(aBalances)-1] 
-
-        # aTotalReturn = sum(aReturns)
         
         return decFinalBalance
     
@@ -243,9 +242,13 @@ class PortfolioManagement():
         
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.dfEvaluateFitness)
-        oGeneticAlgorithm = GeneticAlgorithm(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        dfOptimumResult = oGeneticAlgorithm.optimize(oToolbox)
+        # oGeneticAlgorithm = GeneticAlgorithm(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        # dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
+
+        oParticleSwarmAlgorithm = ParticleSwarmOptimization(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
+
         return dfOptimumResult
 
 
@@ -279,7 +282,7 @@ class GeneticAlgorithm():
     
     def GenerateIndividual(self, toolbox, dfDecisonVariables, sGroupOfIndividual):
 
-        sGeneOrder = ""
+        sDecisionVariables = ""
         
         for iIndex, oRow in dfDecisonVariables.iterrows():
             sLabel = oRow["label"]
@@ -290,12 +293,12 @@ class GeneticAlgorithm():
             toolbox.register(sLabel, variable_types.convert_to_random, eVariableType, decLowerBound, decUpperBound)
             
             
-            if sGeneOrder == "":
-                sGeneOrder = "toolbox."+sLabel
+            if sDecisionVariables == "":
+                sDecisionVariables = "toolbox."+sLabel
             else:
-                sGeneOrder = sGeneOrder + "," + "toolbox."+sLabel
+                sDecisionVariables = sDecisionVariables + "," + "toolbox."+sLabel
 
-        toolbox.register(sGroupOfIndividual, tools.initCycle,creator.Individual, eval(sGeneOrder))
+        toolbox.register(sGroupOfIndividual, tools.initCycle,creator.Individual, eval(sDecisionVariables))
     
     
     def aAdjustPopulation(self, aPopulationX,aPopulationY):
@@ -347,7 +350,7 @@ class GeneticAlgorithm():
         tools.mutPolynomialBounded(aIndividual,self.decMutationCrowdingDegree, dfDecisonVariables["lower_bound"].values.tolist(),dfDecisonVariables["upper_bound"].values.tolist(), self.decMutationRate)
     
     
-    def optimize(self, toolbox):
+    def Optimize(self, toolbox):
         creator.create("Individual", list, fitness = self.FitnessFunction)
         
         self.GenerateIndividual(toolbox, self.dfDecisonVariablesX, "x")
@@ -370,7 +373,7 @@ class GeneticAlgorithm():
         dfLabelsY =  self.dfDecisonVariablesY["label"] 
         dfBothDecisionVariableLabels = dfLabelsX.append(dfLabelsY)
                 
-        oOutputFile = Result_Logs.open_output_file(dfBothDecisionVariableLabels,self.dfObjectiveFunctions["label"])
+        oOutputFile = ResultLogs.OpenOutputFile(dfBothDecisionVariableLabels,self.dfObjectiveFunctions["label"])
         
         
         aFitnesses = list(map(toolbox.evaluate, aPopulationX, aPopulationY))
@@ -423,7 +426,7 @@ class GeneticAlgorithm():
                 aIndY = aPopulationY[iIndex]
                 aIndFull = aIndX + aIndY
                 
-                Result_Logs.log_to_output_file(oOutputFile, iRunId, i+1,aIndFull, aIndX.fitness.values)
+                ResultLogs.LogToOutputFile(oOutputFile, iRunId, i+1,aIndFull, aIndX.fitness.values)
                 iRunId = iRunId + 1
                 
             aBestIndX = tools.selBest(aPopulationX, 1)[0]
@@ -436,13 +439,231 @@ class GeneticAlgorithm():
                            
             
         aBestIndFull = aBestIndX + aBestIndY
-        Result_Logs.log_to_output_file(oOutputFile, "OPTIMUM RESULT", "", aBestIndFull, aBestIndX.fitness.values)
+        ResultLogs.LogToOutputFile(oOutputFile, "OPTIMUM RESULT", "", aBestIndFull, aBestIndX.fitness.values)
                 
         return 
 
 
-class Result_Logs():
-    def open_output_file(aDecisionVariableLabels,aFitnessLabels):
+
+class ParticleSwarmOptimization():
+    def __init__(self,FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20,iPopulationSize = 50 , decSimilarityRatio = 0.1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
+        self.FitnessFunction = FitnessFunction
+        self.dfObjectiveFunctions = dfObjectiveFunctions
+        self.dfDecisonVariablesX = dfDecisonVariablesX
+        self.dfDecisonVariablesY = dfDecisonVariablesY
+        self.iMaxNumberOfGenerations = iMaxNumberOfGenerations
+        self.iPopulationSize = iPopulationSize      
+        self.decSimilarityRatio = decSimilarityRatio
+        self.decInertiaWeight = decInertiaWeight
+        self.decExplotationCoefficient = decExplotationCoefficient
+        self.decExplorationCoefficient = decExplorationCoefficient
+        self.decSpeedRatio = 0.1
+        
+
+    def GenerateParticle(self, toolbox,  dfDecisonVariables):
+        sDecisionVariables = ""
+        sDecisionVariableSpeeds = ""
+        for iIndex, oRow in dfDecisonVariables.iterrows():
+            sLabel = oRow["label"]
+            sLabelSpeed= sLabel + "_speed"
+            eVariableType = oRow["variable_type"]
+            decLowerBound = oRow["lower_bound"]
+            decUpperBound = oRow["upper_bound"]
+            
+            decStepSizeLower = 0
+            decStepSizeUpper = int(decUpperBound * self.decSpeedRatio)
+            
+            toolbox.register(sLabel, variable_types.convert_to_random,eVariableType , decLowerBound, decUpperBound)
+            toolbox.register(sLabelSpeed, variable_types.convert_to_random, eVariableType, decStepSizeLower, decStepSizeUpper)
+            
+            if sDecisionVariables == "":
+                sDecisionVariables = "toolbox."+sLabel
+                sDecisionVariableSpeeds = "toolbox."+sLabelSpeed
+            else:
+                sDecisionVariables = sDecisionVariables + "," + "toolbox."+sLabel
+                sDecisionVariableSpeeds = sDecisionVariableSpeeds + "," + "toolbox."+sLabelSpeed
+        
+                
+        oParticle = creator.Particle(tools.initCycle(creator.Particle,eval(sDecisionVariables)))
+        oParticle.aPersonalBest = oParticle
+        
+        
+        oParticle.aSpeed = tools.initCycle(list, eval(sDecisionVariableSpeeds))
+        oParticle.aSpeedMin = list(dfDecisonVariables["lower_bound"])
+        oParticle.aSpeedMax = list(dfDecisonVariables["upper_bound"])        
+        oParticle.aLabel = list(dfDecisonVariables["label"])
+            
+        return oParticle
+
+
+    def aAdjustPopulation(self, aPopulationX,aPopulationY):
+        for i in range(len(aPopulationX)):
+            aIndividualX = aPopulationX[i]
+            aIndividualY = aPopulationY[i]
+            
+            for j in range(len(aIndividualX)):
+                decX = aIndividualX[j]
+                iY = aIndividualY[j]
+                aIndividualY[j] = int(round(aIndividualY[j]))
+                            
+                if iY == 0:
+                    aPopulationX[i][j] = 0
+                else:
+                    if decX == 0:
+                        aPopulationY[i][j] = 0
+                    
+        return aPopulationX, aPopulationY
+      
+    
+    
+    def UpdateParticle(self, oParticle, oParticleGlobalBest, dfDecisonVariables):
+        aRandom1 = np.random.uniform(0,1, len(oParticle))
+        aCoeffCognitiveComponent = self.decExplotationCoefficient * aRandom1
+        
+        aDistanceToPersonalBest = map(operator.sub, oParticle.aPersonalBest, oParticle)
+        aCognitiveComponent = list(map(operator.mul, aCoeffCognitiveComponent, aDistanceToPersonalBest))
+        
+        aRandom2 = np.random.uniform(0,1, len(oParticle))
+        aCoeffSocialComponent = self.decExplorationCoefficient * aRandom2
+        
+        aDistanceToGlobalBest = map(operator.sub, oParticleGlobalBest, oParticle)
+        aSocialComponent = list(map(operator.mul, aCoeffSocialComponent, aDistanceToGlobalBest))
+        
+        for i in range(len(oParticle)):
+            eVariableType = dfDecisonVariables["variable_type"][i]
+            decUpperBound = dfDecisonVariables["upper_bound"][i]
+            decLowerBound = dfDecisonVariables["lower_bound"][i]
+            decStepSizeLower = dfDecisonVariables["step_size_lower"][i]
+            decStepSizeUpper = dfDecisonVariables["step_size_upper"][i]         
+            
+            decSpeedValue = oParticle.aSpeed[i] + aCognitiveComponent[i] + aSocialComponent[i]
+            if decSpeedValue < decStepSizeLower :
+                oParticle.aSpeed[i] = decStepSizeLower
+            elif decSpeedValue > decStepSizeUpper:
+                oParticle.aSpeed[i] = decStepSizeUpper
+            
+            if eVariableType == variable_types.integer:
+                oParticle.aSpeed[i] = int(oParticle.aSpeed[i])
+            
+            oParticle[i] = oParticle[i] + oParticle.aSpeed[i]
+            
+            decValue = oParticle[i]
+            if decValue < decLowerBound:
+                oParticle[i] = decLowerBound
+            elif decValue > decUpperBound:
+                oParticle[i] = decUpperBound
+            
+            if eVariableType == variable_types.integer:
+                oParticle[i] = int(oParticle[i])
+        
+        
+
+
+    def Optimize(self, toolbox):
+        creator.create("Particle", list, fitness = self.FitnessFunction, aSpeed = list ,aSpeedMin = list, aSpeedMax = list, aPersonalBest = list, aLabel = list)
+        
+        toolbox.register("x", self.GenerateParticle, toolbox, self.dfDecisonVariablesX)
+        toolbox.register("y", self.GenerateParticle, toolbox, self.dfDecisonVariablesY)
+
+
+        toolbox.register("update", self.UpdateParticle)
+        
+        toolbox.register("population_x", tools.initRepeat, list ,toolbox.x)
+        toolbox.register("population_y", tools.initRepeat, list ,toolbox.y)
+        
+
+        aPopulationX = toolbox.population_x(self.iPopulationSize)
+        aPopulationY = toolbox.population_y(self.iPopulationSize)
+        
+        aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
+        
+
+        dfLabelsX =  self.dfDecisonVariablesX["label"] 
+        dfLabelsY =  self.dfDecisonVariablesY["label"] 
+        dfBothDecisionVariableLabels = dfLabelsX.append(dfLabelsY)
+                
+        oOutputFile = ResultLogs.OpenOutputFile(dfBothDecisionVariableLabels,self.dfObjectiveFunctions["label"])
+                
+
+        oParticleXGlobalBest = list
+        oParticleYGlobalBest = list
+        
+        iRunId = 1
+        for i in range(self.iMaxNumberOfGenerations):
+            
+            for iIndex in range(len(aPopulationX)):
+
+                oParticleX = aPopulationX[iIndex]
+                oParticleY = aPopulationY[iIndex]
+                
+                aFitness = (toolbox.evaluate(oParticleX, oParticleY),)
+                
+                oParticleX.fitness.values = aFitness
+                oParticleY.fitness.values = aFitness
+                
+                
+                print("particle: " + str(iRunId+1))
+                
+                ResultLogs.LogToOutputFile(oOutputFile, iRunId, i+1,oParticleX, aFitness)
+                
+                if not oParticleX.aPersonalBest:
+                    oParticleX.aPersonalBest = creator.Particle(oParticleX)
+                    oParticleX.aPersonalBest.fitness.values = aFitness
+                    
+                    oParticleY.aPersonalBest = creator.Particle(oParticleY)
+                    oParticleY.aPersonalBest.fitness.values = aFitness
+                    
+                else:                    
+                    if oParticleX.aPersonalBest.fitness < oParticleX.fitness:
+                        oParticleX.aPersonalBest = creator.Particle(oParticleX)
+                        oParticleX.aPersonalBest.fitness.values = aFitness
+                        
+                        oParticleY.aPersonalBest = creator.Particle(oParticleY)
+                        oParticleY.aPersonalBest.fitness.values = aFitness
+                        
+
+                if oParticleXGlobalBest == list:
+                    oParticleXGlobalBest = creator.Particle(oParticleX)
+                    oParticleXGlobalBest.fitness.values = aFitness
+                    
+                    oParticleYGlobalBest = creator.Particle(oParticleY)
+                    oParticleYGlobalBest.fitness.values = aFitness                                       
+                else:
+                    if oParticleXGlobalBest.fitness < oParticleX.fitness:
+                       oParticleXGlobalBest = creator.Particle(oParticleX)
+                       oParticleXGlobalBest.fitness.values = aFitness
+                       
+                       oParticleYGlobalBest = creator.Particle(oParticleY)
+                       oParticleYGlobalBest.fitness.values = aFitness
+                       
+                iRunId = iRunId + 1
+                
+
+            for iIndex in range(len(aPopulationX)):
+                oParticleX = aPopulationX[iIndex]
+                oParticleY = aPopulationY[iIndex]
+                
+                toolbox.update(oParticleX, oParticleXGlobalBest, self.dfDecisonVariablesX)     
+                toolbox.update(oParticleY, oParticleXGlobalBest, self.dfDecisonVariablesX)
+                
+            
+            
+            iBestOccurance = aPopulationX.count(oParticleXGlobalBest)
+            if iBestOccurance/self.iPopulationSize >= self.decSimilarityRatio:
+                break
+        
+
+        oParticleGlobalBest = oParticleXGlobalBest + oParticleYGlobalBest
+        ResultLogs.LogToOutputFile(oOutputFile, "OPTIMUM RESULT", "", oParticleGlobalBest, oParticleXGlobalBest.fitness.values)
+                                
+        return oParticleGlobalBest
+    
+
+
+
+
+class ResultLogs():
+    def OpenOutputFile(aDecisionVariableLabels,aFitnessLabels):
         sTimeStamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         sFileName = sTimeStamp + '.txt'
         
@@ -458,7 +679,7 @@ class Result_Logs():
         return oOutputFile
     
     
-    def log_to_output_file(oOutputFile, iRunId, iGenerationId, aDecisionVariables, aFitnessValues):
+    def LogToOutputFile(oOutputFile, iRunId, iGenerationId, aDecisionVariables, aFitnessValues):
         sTimeStamp = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
         sValues = str(iRunId)
         sValues = sValues + ';' + str(iGenerationId)
@@ -473,14 +694,11 @@ def dfGetInputs():
 
     decInitialBalance = 150
     
-    
     dfExpectedPrices = pd.read_csv(gc_s_FILE_PATH, index_col=0)
     
     dfForwardTimeSteps = pd.DataFrame(dfExpectedPrices.columns,index = None, columns = ['TimeStep'])
     
     dfFinancialProducts = pd.DataFrame(dfExpectedPrices.index)
-    
-    
     
     return dfExpectedPrices , dfFinancialProducts , dfForwardTimeSteps, decInitialBalance
 
