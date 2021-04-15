@@ -18,8 +18,8 @@ from datetime import datetime
 
 
 
-gc_s_FILE_PATH =r'C:\Users\yunus\Documents\My Project\data\EXPECTED PRICES.csv'
-
+gc_s_EXPECTED_PRICES_PATH =r'C:\Users\yunus\Documents\My Project\data\EXPECTED PRICES.csv'
+gc_s_FINANCIAL_PRODUCTS_PATH = r'C:\Users\yunus\Documents\My Project\data\FINANCIAL PRODUCTS.csv'
 
 # Assumtions:
     # There is only one base currency TRY
@@ -46,9 +46,10 @@ class PortfolioManagement():
         self.decInitialBalance = decInitialBalance
         self.dfIndices = self.dfGetIndices()
         self.aPriceDiffs = self.aGetPriceDiffs()
+        self.decStepSizeRatio = 0.01
 
-        
-    
+
+
     def dfGetIndices(self):
         aI = []
         aJ = []
@@ -96,6 +97,8 @@ class PortfolioManagement():
         aLabels = []
         aLowerBounds = []
         aUpperBounds = []
+        aLowerStepSizes = []
+        aUpperStepSizes = []
         
 
         if sVariableLetter == "x":
@@ -113,23 +116,32 @@ class PortfolioManagement():
             if sVariableLetter == "x":
                 decUpperBound = self.decInitialBalance
                 decLowerBound = 0
-            else:
-                decUpperBound = 1
-                decLowerBound = -1
                 
+                decUpperStepSize = decUpperBound * self.decStepSizeRatio
+                decLowerStepSize = 0
+            else:
+                decLowerBound = -1
+                decUpperBound = 1
+                
+                decLowerStepSize = -1
+                decUpperStepSize = 1
                 
             aLabels.append(sLabel)
             aTypes.append(iType)
             aLowerBounds.append(decLowerBound)
             aUpperBounds.append(decUpperBound)
-
-                            
+            
+            aLowerStepSizes.append(decLowerStepSize)
+            aUpperStepSizes.append(decUpperStepSize)
+            
 
         dicDecisionVariables = {
                     "label":aLabels,
                     "variable_type": aTypes,
                     "lower_bound" : aLowerBounds,
-                    "upper_bound" : aUpperBounds
+                    "upper_bound" : aUpperBounds,
+                    "step_size_lower" : aLowerStepSizes,
+                    "step_size_upper" : aUpperStepSizes
                     }
 
         
@@ -167,7 +179,8 @@ class PortfolioManagement():
             
             decTotalReturn = 0
             decTotalAmount = 0
-            decCapitalAmount = 0 
+            decCapitalAmount = 0
+            
             for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
                 
                 for kIndex, kRow in self.dfFinancialProducts.iterrows():
@@ -176,7 +189,6 @@ class PortfolioManagement():
                     dfIndicReturns = self.dfIndices[(self.dfIndices.i == kIndex) & (self.dfIndices.j == jIndex) & (self.dfIndices.k == iIndex)]
                     dfIndicCapitalAmounts = self.dfIndices[(self.dfIndices.i == kIndex) & (self.dfIndices.j == jIndex) & (self.dfIndices.k == iIndex)]
                     
-                    
                     if dfIndicReturns.empty == False:
                         iIndiceReturn = dfIndicReturns.index[0]
                         decTotalReturn = decTotalReturn + aReturns[iIndiceReturn]
@@ -184,12 +196,12 @@ class PortfolioManagement():
                     if dfIndicAmounts.empty == False:
                         iIndiceAmount = dfIndicAmounts.index[0]
                         decTotalAmount = decTotalAmount + aAmounts[iIndiceAmount]
-                        
+
                     if dfIndicCapitalAmounts.empty == False:
                         iIndiceCapitalAmount = dfIndicCapitalAmounts.index[0]
                         decCapitalAmount = decCapitalAmount + aAmounts[iIndiceCapitalAmount]
                         
-                                           
+
             if iIndex == 0:
                  aBalances[iIndex] =  self.decInitialBalance +  decTotalReturn - decTotalAmount + decCapitalAmount
             else:
@@ -216,7 +228,15 @@ class PortfolioManagement():
             decBalance = aBalances[i]
             
             if decBalance < 0 :
-                return -1
+                aNonZero = [j for j in aReturns if j != 0]
+
+                decMinReturn = min(aNonZero)
+                iIndexMinReturn = aReturns.index(decMinReturn)
+
+                aIndividualX[iIndexMinReturn] = 0
+                aIndividualY[iIndexMinReturn] = 0
+                
+                return self.dfEvaluateFitness(aIndividualX, aIndividualY)
 
     
         for i in range(len(aReturns)):
@@ -245,7 +265,6 @@ class PortfolioManagement():
         # oGeneticAlgorithm = GeneticAlgorithm(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
         # dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
-
         oParticleSwarmAlgorithm = ParticleSwarmOptimization(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
         dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
 
@@ -369,7 +388,7 @@ class GeneticAlgorithm():
         aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
         
         
-        dfLabelsX =  self.dfDecisonVariablesX["label"] 
+        dfLabelsX =  self.dfDecisonVariablesX["label"]
         dfLabelsY =  self.dfDecisonVariablesY["label"] 
         dfBothDecisionVariableLabels = dfLabelsX.append(dfLabelsY)
                 
@@ -446,7 +465,7 @@ class GeneticAlgorithm():
 
 
 class ParticleSwarmOptimization():
-    def __init__(self,FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20,iPopulationSize = 50 , decSimilarityRatio = 0.1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
+    def __init__(self,FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20,iPopulationSize = 50 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariablesX = dfDecisonVariablesX
@@ -457,7 +476,6 @@ class ParticleSwarmOptimization():
         self.decInertiaWeight = decInertiaWeight
         self.decExplotationCoefficient = decExplotationCoefficient
         self.decExplorationCoefficient = decExplorationCoefficient
-        self.decSpeedRatio = 0.1
         
 
     def GenerateParticle(self, toolbox,  dfDecisonVariables):
@@ -469,9 +487,8 @@ class ParticleSwarmOptimization():
             eVariableType = oRow["variable_type"]
             decLowerBound = oRow["lower_bound"]
             decUpperBound = oRow["upper_bound"]
-            
-            decStepSizeLower = 0
-            decStepSizeUpper = int(decUpperBound * self.decSpeedRatio)
+            decStepSizeLower = oRow["step_size_lower"]
+            decStepSizeUpper = oRow["step_size_upper"]    
             
             toolbox.register(sLabel, variable_types.convert_to_random,eVariableType , decLowerBound, decUpperBound)
             toolbox.register(sLabelSpeed, variable_types.convert_to_random, eVariableType, decStepSizeLower, decStepSizeUpper)
@@ -486,17 +503,16 @@ class ParticleSwarmOptimization():
                 
         oParticle = creator.Particle(tools.initCycle(creator.Particle,eval(sDecisionVariables)))
         oParticle.aPersonalBest = oParticle
-        
-        
         oParticle.aSpeed = tools.initCycle(list, eval(sDecisionVariableSpeeds))
-        oParticle.aSpeedMin = list(dfDecisonVariables["lower_bound"])
-        oParticle.aSpeedMax = list(dfDecisonVariables["upper_bound"])        
+        oParticle.aSpeedMin = list(dfDecisonVariables["step_size_lower"])
+        oParticle.aSpeedMax = list(dfDecisonVariables["step_size_upper"])
         oParticle.aLabel = list(dfDecisonVariables["label"])
             
         return oParticle
 
 
     def aAdjustPopulation(self, aPopulationX,aPopulationY):
+
         for i in range(len(aPopulationX)):
             aIndividualX = aPopulationX[i]
             aIndividualY = aPopulationY[i]
@@ -565,22 +581,20 @@ class ParticleSwarmOptimization():
         toolbox.register("x", self.GenerateParticle, toolbox, self.dfDecisonVariablesX)
         toolbox.register("y", self.GenerateParticle, toolbox, self.dfDecisonVariablesY)
 
-
         toolbox.register("update", self.UpdateParticle)
-        
+
         toolbox.register("population_x", tools.initRepeat, list ,toolbox.x)
         toolbox.register("population_y", tools.initRepeat, list ,toolbox.y)
-        
 
         aPopulationX = toolbox.population_x(self.iPopulationSize)
         aPopulationY = toolbox.population_y(self.iPopulationSize)
         
         aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
         
-
         dfLabelsX =  self.dfDecisonVariablesX["label"] 
         dfLabelsY =  self.dfDecisonVariablesY["label"] 
         dfBothDecisionVariableLabels = dfLabelsX.append(dfLabelsY)
+        
                 
         oOutputFile = ResultLogs.OpenOutputFile(dfBothDecisionVariableLabels,self.dfObjectiveFunctions["label"])
                 
@@ -590,6 +604,7 @@ class ParticleSwarmOptimization():
         
         iRunId = 1
         for i in range(self.iMaxNumberOfGenerations):
+            print("Generation #: " + str(i))
             
             for iIndex in range(len(aPopulationX)):
 
@@ -600,11 +615,10 @@ class ParticleSwarmOptimization():
                 
                 oParticleX.fitness.values = aFitness
                 oParticleY.fitness.values = aFitness
-                
-                
-                print("particle: " + str(iRunId+1))
-                
-                ResultLogs.LogToOutputFile(oOutputFile, iRunId, i+1,oParticleX, aFitness)
+
+
+                oParticle = oParticleX + oParticleY
+                ResultLogs.LogToOutputFile(oOutputFile, iRunId, i+1,oParticle, aFitness)
                 
                 if not oParticleX.aPersonalBest:
                     oParticleX.aPersonalBest = creator.Particle(oParticleX)
@@ -613,7 +627,7 @@ class ParticleSwarmOptimization():
                     oParticleY.aPersonalBest = creator.Particle(oParticleY)
                     oParticleY.aPersonalBest.fitness.values = aFitness
                     
-                else:                    
+                else:
                     if oParticleX.aPersonalBest.fitness < oParticleX.fitness:
                         oParticleX.aPersonalBest = creator.Particle(oParticleX)
                         oParticleX.aPersonalBest.fitness.values = aFitness
@@ -641,12 +655,13 @@ class ParticleSwarmOptimization():
 
             for iIndex in range(len(aPopulationX)):
                 oParticleX = aPopulationX[iIndex]
-                oParticleY = aPopulationY[iIndex]
+                # oParticleY = aPopulationY[iIndex]
                 
                 toolbox.update(oParticleX, oParticleXGlobalBest, self.dfDecisonVariablesX)     
-                toolbox.update(oParticleY, oParticleXGlobalBest, self.dfDecisonVariablesX)
-                
+                # toolbox.update(oParticleY, oParticleXGlobalBest, self.dfDecisonVariablesY)
             
+            
+            aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
             
             iBestOccurance = aPopulationX.count(oParticleXGlobalBest)
             if iBestOccurance/self.iPopulationSize >= self.decSimilarityRatio:
@@ -694,11 +709,12 @@ def dfGetInputs():
 
     decInitialBalance = 150
     
-    dfExpectedPrices = pd.read_csv(gc_s_FILE_PATH, index_col=0)
+    dfExpectedPrices = pd.read_csv(gc_s_EXPECTED_PRICES_PATH, index_col=0)
     
     dfForwardTimeSteps = pd.DataFrame(dfExpectedPrices.columns,index = None, columns = ['TimeStep'])
     
     dfFinancialProducts = pd.DataFrame(dfExpectedPrices.index)
+    
     
     return dfExpectedPrices , dfFinancialProducts , dfForwardTimeSteps, decInitialBalance
 
