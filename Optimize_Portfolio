@@ -84,8 +84,10 @@ class PortfolioManagement():
             j = aRow["j"]
             k = aRow["k"]
             
-
+            
             decPriceDiff = self.dfExpectedPrices.iloc[i][k] - self.dfExpectedPrices.iloc[i][j]
+
+            
             aPriceDiffs.append(decPriceDiff)
 
         return aPriceDiffs
@@ -163,9 +165,16 @@ class PortfolioManagement():
 
     def aCalculateReturns(self,aAmountsX, aPositionsY):
         aReturns = []
-        for i in range(len(aAmountsX)):
-            decReturn = aAmountsX[i] * aPositionsY[i]
-            decReturn = self.aPriceDiffs[i] * decReturn
+        
+        for iIndex, aRow in self.dfIndices.iterrows():
+            i = aRow["i"]
+        
+            decSpread = self.dfFinancialProducts.iloc[i]["Spread"]
+            decConstant = self.dfFinancialProducts.iloc[i]["Constant"]
+            
+            decReturn = (self.aPriceDiffs[i] - decSpread) * aAmountsX[iIndex] * aPositionsY[iIndex]
+            
+            decReturn = decReturn - abs(aPositionsY[iIndex])*decConstant
             
             aReturns.append(decReturn)
         return aReturns
@@ -229,6 +238,7 @@ class PortfolioManagement():
             
             if decBalance < 0 :
                 aNonZero = [j for j in aReturns if j != 0]
+                
 
                 decMinReturn = min(aNonZero)
                 iIndexMinReturn = aReturns.index(decMinReturn)
@@ -713,7 +723,10 @@ def dfGetInputs():
     
     dfForwardTimeSteps = pd.DataFrame(dfExpectedPrices.columns,index = None, columns = ['TimeStep'])
     
-    dfFinancialProducts = pd.DataFrame(dfExpectedPrices.index)
+    # dfFinancialProducts = pd.DataFrame(dfExpectedPrices.index)
+    
+    
+    dfFinancialProducts = pd.read_csv(gc_s_FINANCIAL_PRODUCTS_PATH)
     
     
     return dfExpectedPrices , dfFinancialProducts , dfForwardTimeSteps, decInitialBalance
