@@ -172,11 +172,15 @@ class PortfolioManagement():
             decSpread = self.dfFinancialProducts.iloc[i]["Spread"]
             decConstant = self.dfFinancialProducts.iloc[i]["Constant"]
             
-            decReturn = (self.aPriceDiffs[i] - decSpread) * aAmountsX[iIndex] * aPositionsY[iIndex]
+            decReturn = self.aPriceDiffs[iIndex] * aAmountsX[iIndex] * aPositionsY[iIndex]
+            decLossDueToSpread = abs(aPositionsY[iIndex])*aAmountsX[iIndex]*decSpread
+            decLossDueToConstant = abs(aPositionsY[iIndex])*decConstant
             
-            decReturn = decReturn - abs(aPositionsY[iIndex])*decConstant
+            decReturn = decReturn - decLossDueToSpread
+            decReturn = decReturn - decLossDueToConstant 
             
             aReturns.append(decReturn)
+            
         return aReturns
 
 
@@ -218,28 +222,58 @@ class PortfolioManagement():
 
             
         return aBalances
-    
 
+    def EnsureNonNegativeReturns(self, aIndividualX, aIndividualY):
+        aAmountsX =  list(aIndividualX)
+        aPositionsY = list(aIndividualY)
+        
+        aReturns = self.aCalculateReturns(aAmountsX , aPositionsY)
+        for i in range(len(aIndividualX)):
+            decReturn = aReturns[i]
             
+            if decReturn <= 0:
+                aIndividualX[i] = 0 
+                aIndividualY[i] = 0
+
+
+    def EnsureVariableDependency(self, aIndividualX, aIndividualY):
+        for i in range(len(aIndividualX)):
+            decX = aIndividualX[i]
+            iY = aIndividualY[i]
+            aIndividualY[i] = int(round(aIndividualY[i]))
+        
+            if iY == 0:
+                aIndividualX[i] = 0
+            
+            if decX == 0:
+                aIndividualY[i] = 0
+ 
     
+    def aAdjustPopulation(self, aPopulationX,aPopulationY):
+        for i in range(len(aPopulationX)):
+            aIndividualX = aPopulationX[i]
+            aIndividualY = aPopulationY[i]
+            
+            self.EnsureVariableDependency(aIndividualX, aIndividualY)          
+            self.EnsureNonNegativeReturns(aIndividualX, aIndividualY)
+            aPopulationX[i] = aIndividualX
+            aPopulationY[i] = aIndividualY
+
+
     def dfEvaluateFitness(self, aIndividualX, aIndividualY):
         
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)
         
-        
         aReturns = self.aCalculateReturns(aAmountsX , aPositionsY)
-        
         aBalances = self.aCalculateBalances(aReturns, aAmountsX)
-        
-        
+
         for i in range(len(aBalances)):
             decBalance = aBalances[i]
             
             if decBalance < 0 :
                 aNonZero = [j for j in aReturns if j != 0]
-                
-
+                                
                 decMinReturn = min(aNonZero)
                 iIndexMinReturn = aReturns.index(decMinReturn)
 
@@ -247,18 +281,12 @@ class PortfolioManagement():
                 aIndividualY[iIndexMinReturn] = 0
                 
                 return self.dfEvaluateFitness(aIndividualX, aIndividualY)
+       
 
-    
-        for i in range(len(aReturns)):
-            decReturn = aReturns[i]
-            
-            if  decReturn < 0:
-                return -1
-                
-                
-        decFinalBalance =aBalances[len(aBalances)-1] 
+        decFinalBalance =aBalances[len(aBalances)-1]
+        decTotalProfit = decFinalBalance - self.decInitialBalance
         
-        return decFinalBalance
+        return decTotalProfit
     
     
     
@@ -272,10 +300,10 @@ class PortfolioManagement():
         
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.dfEvaluateFitness)
-        # oGeneticAlgorithm = GeneticAlgorithm(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        # oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
         # dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
-        oParticleSwarmAlgorithm = ParticleSwarmOptimization(creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
         dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
 
         return dfOptimumResult
@@ -284,7 +312,6 @@ class PortfolioManagement():
 class variable_types(enum.Enum):
     integer = 1
     decimal = 2
-    
     
     def convert_to_random(eType, vMin, vMax):
         if eType == variable_types.integer:
@@ -296,7 +323,7 @@ class variable_types(enum.Enum):
 
 class GeneticAlgorithm():
     
-    def __init__(self, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20, iPopulationSize = 50, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
+    def __init__(self, oPortfolioManager, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20, iPopulationSize = 50, decSimilarityRatio = 1.0, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariablesX = dfDecisonVariablesX
@@ -307,7 +334,8 @@ class GeneticAlgorithm():
         self.decCrossoverRate = decCrossoverRate
         self.decMutationRate = decMutationRate
         self.decMutationCrowdingDegree = decMutationCrowdingDegree
-        
+        self.oPortfolioManager = oPortfolioManager
+
     
     def GenerateIndividual(self, toolbox, dfDecisonVariables, sGroupOfIndividual):
 
@@ -329,26 +357,7 @@ class GeneticAlgorithm():
 
         toolbox.register(sGroupOfIndividual, tools.initCycle,creator.Individual, eval(sDecisionVariables))
     
-    
-    def aAdjustPopulation(self, aPopulationX,aPopulationY):
-        for i in range(len(aPopulationX)):
-            aIndividualX = aPopulationX[i]
-            aIndividualY = aPopulationY[i]
             
-            for j in range(len(aIndividualX)):
-                decX = aIndividualX[j]
-                iY = aIndividualY[j]
-                aIndividualY[j] = int(round(aIndividualY[j]))
-                            
-                if iY == 0:
-                    aPopulationX[i][j] = 0
-                else:
-                    if decX == 0:
-                        aPopulationY[i][j] = 0
-                    
-        return aPopulationX, aPopulationY
-      
-        
     def select(self, aPopulationX, aPopulationY):
         aOffspringX = tools.selTournament(individuals = aPopulationX, k = len(aPopulationX), tournsize=self.iPopulationSize)
         aOffspringY = tools.selTournament(individuals = aPopulationY, k = len(aPopulationY), tournsize=self.iPopulationSize)
@@ -395,7 +404,7 @@ class GeneticAlgorithm():
         aPopulationX = toolbox.population_x(self.iPopulationSize)
         aPopulationY = toolbox.population_y(self.iPopulationSize)
         
-        aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
+        self.oPortfolioManager.aAdjustPopulation(aPopulationX, aPopulationY)
         
         
         dfLabelsX =  self.dfDecisonVariablesX["label"]
@@ -434,7 +443,7 @@ class GeneticAlgorithm():
                 toolbox.mutate(aMutantY, self.dfDecisonVariablesY)
                 
             
-            aOffspringX, aOffspringY = self.aAdjustPopulation(aOffspringX, aOffspringY)
+            self.oPortfolioManager.aAdjustPopulation(aOffspringX, aOffspringY)
 
 
             aFitnesses = list(map(toolbox.evaluate, aOffspringX, aOffspringY))
@@ -475,7 +484,7 @@ class GeneticAlgorithm():
 
 
 class ParticleSwarmOptimization():
-    def __init__(self,FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20,iPopulationSize = 50 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
+    def __init__(self,oPortfolioManager, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20,iPopulationSize = 50 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariablesX = dfDecisonVariablesX
@@ -486,6 +495,7 @@ class ParticleSwarmOptimization():
         self.decInertiaWeight = decInertiaWeight
         self.decExplotationCoefficient = decExplotationCoefficient
         self.decExplorationCoefficient = decExplorationCoefficient
+        self.oPortfolioManager = oPortfolioManager
         
 
     def GenerateParticle(self, toolbox,  dfDecisonVariables):
@@ -519,28 +529,7 @@ class ParticleSwarmOptimization():
         oParticle.aLabel = list(dfDecisonVariables["label"])
             
         return oParticle
-
-
-    def aAdjustPopulation(self, aPopulationX,aPopulationY):
-
-        for i in range(len(aPopulationX)):
-            aIndividualX = aPopulationX[i]
-            aIndividualY = aPopulationY[i]
-            
-            for j in range(len(aIndividualX)):
-                decX = aIndividualX[j]
-                iY = aIndividualY[j]
-                aIndividualY[j] = int(round(aIndividualY[j]))
-                            
-                if iY == 0:
-                    aPopulationX[i][j] = 0
-                else:
-                    if decX == 0:
-                        aPopulationY[i][j] = 0
-                    
-        return aPopulationX, aPopulationY
-      
-    
+     
     
     def UpdateParticle(self, oParticle, oParticleGlobalBest, dfDecisonVariables):
         aRandom1 = np.random.uniform(0,1, len(oParticle))
@@ -599,7 +588,7 @@ class ParticleSwarmOptimization():
         aPopulationX = toolbox.population_x(self.iPopulationSize)
         aPopulationY = toolbox.population_y(self.iPopulationSize)
         
-        aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
+        self.oPortfolioManager.aAdjustPopulation(aPopulationX, aPopulationY)
         
         dfLabelsX =  self.dfDecisonVariablesX["label"] 
         dfLabelsY =  self.dfDecisonVariablesY["label"] 
@@ -671,7 +660,7 @@ class ParticleSwarmOptimization():
                 # toolbox.update(oParticleY, oParticleXGlobalBest, self.dfDecisonVariablesY)
             
             
-            aPopulationX, aPopulationY = self.aAdjustPopulation(aPopulationX, aPopulationY)
+            self.oPortfolioManager.aAdjustPopulation(aPopulationX, aPopulationY)
             
             iBestOccurance = aPopulationX.count(oParticleXGlobalBest)
             if iBestOccurance/self.iPopulationSize >= self.decSimilarityRatio:
