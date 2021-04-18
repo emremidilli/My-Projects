@@ -22,9 +22,7 @@ gc_s_EXPECTED_PRICES_OPEN_PATH = r'C:\Users\yunus\Documents\My Project\data\Inpu
 gc_s_EXPECTED_PRICES_CLOSE_PATH = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\EXPECTED PRICES CLOSE.csv'
 gc_s_EXPECTED_SPREAD_PATH = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\EXPECTED SPREAD.csv'
 gc_s_FINANCIAL_PRODUCTS_PATH = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\FINANCIAL PRODUCTS.csv'
-gc_s_PREDICTION_ERROR_MAE = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\PREDICTION ERROR MAE.csv'
 gc_s_PREDICTION_ERROR_MAPE =  r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\PREDICTION ERROR MAPE.csv'
-gc_s_PREDICTION_ERROR_R2 = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\PREDICTION ERROR R2.csv'
 
 # Assumtions:
     # There is only one base currency TRY
@@ -44,7 +42,7 @@ class PortfolioManagement():
         # dfForwardTimeSteps: 
         # decInitialBalance: Initial balance
     # Returs: -
-    def __init__(self, dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, dfPredictionErrorR2, dfPredictionErrorMae, dfPredictionErrorMape):
+    def __init__(self, dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, dfPredictionErrorMape):
         self.dfExpectedPricesClose= dfExpectedPricesClose
         self.dfExpectedPricesOpen= dfExpectedPricesOpen
         self.dfExpectedSpread= dfExpectedSpread
@@ -54,8 +52,6 @@ class PortfolioManagement():
         self.dfIndices = self.dfGetIndices()
         self.aPriceDiffs = self.aGetPriceDiffs()
         self.decStepSizeRatio = 0.01
-        self.dfPredictionErrorR2 = dfPredictionErrorR2
-        self.dfPredictionErrorMae = dfPredictionErrorMae
         self.dfPredictionErrorMape = dfPredictionErrorMape
         
         
@@ -268,6 +264,8 @@ class PortfolioManagement():
 
 
     def decCalculateRiskFactors(self, aIndividualX, aIndividualY):
+        aEffectedErrorMape = []
+        aEffectedAmounts = []
         
         for iIndex, aRow in self.dfIndices.iterrows():
             
@@ -278,14 +276,16 @@ class PortfolioManagement():
                 j = aRow["j"]
                 k = aRow["k"]
                 
-                aEffectedErrorR2 = self.dfPredictionErrorR2.iloc[i][j:k+1]
-                aEffectedErrorMae = self.dfPredictionErrorMae.iloc[i][j:k+1]
-                aEffectedErrorMape = self.dfPredictionErrorMape.iloc[i][j:k+1]
-                
-                
-                
-            
-            
+                for l in range (j,k+1):
+                    aEffectedErrorMape.append(self.dfPredictionErrorMape.iloc[i][l])
+                    aEffectedAmounts.append(aIndividualX[iIndex])
+
+        if len(aEffectedErrorMape) == 0:
+            return 0
+        
+        decWeightedAverage = sum(np.multiply(aEffectedErrorMape,aEffectedAmounts ))/sum(aEffectedAmounts)
+        
+        return decWeightedAverage
             
             
 
@@ -315,10 +315,12 @@ class PortfolioManagement():
         decFinalBalance =aBalances[len(aBalances)-1]
         decTotalProfit = decFinalBalance - self.decInitialBalance
         
+        decEffectedRiskFactor = self.decCalculateRiskFactors(aAmountsX, aPositionsY)
         
-        
-        
-        return decTotalProfit
+        if decEffectedRiskFactor== 0:
+            return 0
+        else:
+            return decTotalProfit/decEffectedRiskFactor
     
     
     
@@ -750,18 +752,14 @@ def dfGetInputs():
         
     dfFinancialProducts = pd.read_csv(gc_s_FINANCIAL_PRODUCTS_PATH)
     
-    dfPredictionErrorR2 = pd.read_csv(gc_s_PREDICTION_ERROR_R2, index_col=0)
-    
-    dfPredictionErrorMae = pd.read_csv(gc_s_PREDICTION_ERROR_MAE, index_col=0)
-    
     dfPredictionErrorMape = pd.read_csv(gc_s_PREDICTION_ERROR_MAPE, index_col=0)
     
     
     
     
-    return dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, dfPredictionErrorR2, dfPredictionErrorMae, dfPredictionErrorMape
+    return dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, dfPredictionErrorMape
 
 
-dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, dfPredictionErrorR2, dfPredictionErrorMae, dfPredictionErrorMape = dfGetInputs()
-oPortfolioManager = PortfolioManagement(dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, dfPredictionErrorR2, dfPredictionErrorMae, dfPredictionErrorMape)
+dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, dfPredictionErrorMape = dfGetInputs()
+oPortfolioManager = PortfolioManagement(dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance,  dfPredictionErrorMape)
 dfOptimumResult = oPortfolioManager.Main()
