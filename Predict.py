@@ -33,14 +33,14 @@ def main():
                 from_time_stamp = df_to_be_predicted.index.min()
                 to_time_stamp = df_to_be_predicted.index.max()
                 
-                df_input, df_time_steps_input = Preprocess.get_feature_values(model_id, "1",from_time_stamp, to_time_stamp)
-                df_output , df_time_steps_target = Preprocess.get_feature_values(model_id, "2",from_time_stamp, to_time_stamp)
+                df_input, df_time_steps_input = Preprocess.dfGetFeatureValues(model_id, "1",from_time_stamp, to_time_stamp)
+                df_output , df_time_steps_target = Preprocess.dfGetFeatureValues(model_id, "2",from_time_stamp, to_time_stamp)
                 
-                feature_size_x, window_length_x = Preprocess.get_dimension_size(df_time_steps_input)
-                feature_size_y , window_length_y = Preprocess.get_dimension_size(df_time_steps_target)
+                feature_size_x, window_length_x = Preprocess.dfGetDimensionSize(df_time_steps_input)
+                feature_size_y , window_length_y = Preprocess.dfGetDimensionSize(df_time_steps_target)
                 
                 df_input_index = df_input.index            
-                df_input = df_input[df_input.index.isin(df_to_be_predicted.index)] #~
+                df_input = df_input[df_input.index.isin(df_to_be_predicted.index)] 
                 
                 if df_input.shape[0] > 0:
                                     
@@ -54,7 +54,9 @@ def main():
                     
                     scaled_input = scaler_input.transform(df_input)
                     
-                    prediction = Neural_Attention_Mechanism.attention_predict(scaled_input, model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
+                    
+                    o_model_neural_attention = Neural_Attention_Mechanism.Neural_Attention_Mechanism(str(model_id), feature_size_x, feature_size_y, window_length_x, window_length_y)
+                    prediction = o_model_neural_attention.predict(scaled_input)
                     
                     prediction = scaler_target.inverse_transform(prediction)
                     prediction = pd.DataFrame(prediction)
