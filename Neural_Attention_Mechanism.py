@@ -8,9 +8,11 @@ Considered that incoming training and to-be predicted data are already scaled.
 """
 
 # https://www.tensorflow.org/tutorials/text/nmt_with_attention#translate
-import tensorflow as tf
+
 import numpy as np
 import os
+import tensorflow as tf
+
 
 
 
@@ -149,7 +151,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
                 predictions, dec_hidden, _ = self.decoder(dec_input, dec_hidden, enc_output)  
                 loss += self.loss_function(targ[:, t], predictions)
                 # using teacher forcing
-                dec_input = tf.expand_dims(predictions, 1)
+                dec_input = tf.expand_dims(targ[:, t], 1)
           
         batch_loss = (loss / int(targ.shape[1]))
         variables = self.encoder.trainable_variables + self.decoder.trainable_variables
