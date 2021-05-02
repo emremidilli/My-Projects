@@ -58,6 +58,8 @@ def main():
                     o_model_neural_attention = Neural_Attention_Mechanism.Neural_Attention_Mechanism(str(model_id), feature_size_x, feature_size_y, window_length_x, window_length_y)
                     prediction = o_model_neural_attention.predict(scaled_input)
                     
+                    
+                    
                     prediction = scaler_target.inverse_transform(prediction)
                     prediction = pd.DataFrame(prediction)
                     prediction["INDEX"] = df_input_index
