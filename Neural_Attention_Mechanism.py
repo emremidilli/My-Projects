@@ -14,8 +14,6 @@ import os
 import tensorflow as tf
 
 
-
-
 class Encoder(tf.keras.Model):
     def __init__(self, one_hot_size, enc_units, batch_sz, activation_function, dropout_rate, recurrent_dropout_rate):
         super(Encoder, self).__init__()
@@ -114,7 +112,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.set_hyperparameters()
         
     
-    def set_hyperparameters(self,epoch_size = 2, batch_size = 112, number_of_hidden_neuron = None, dropout_rate_encoder = 0.1,dropout_rate_decoder=0.1, recurrent_dropout_rate_encoder = 0.1, recurrent_dropout_rate_decoder=0.1, learning_rate = 0.001, momentum_rate=0.1):
+    def set_hyperparameters(self,epoch_size = 10, batch_size = 112, number_of_hidden_neuron = None, dropout_rate_encoder = 0.1,dropout_rate_decoder=0.1, recurrent_dropout_rate_encoder = 0.1, recurrent_dropout_rate_decoder=0.1, learning_rate = 0.001, momentum_rate=0.1):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
         if number_of_hidden_neuron is None:
@@ -218,14 +216,16 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             decoder_input = tf.expand_dims(np.zeros((batch_size_test,self.feature_size_target)) , 1)
             
             p2 = tf.zeros(1)
-            for t in range(0, self.feature_size_target*self.forward_window_length):
-                p, dec_hidden, _ = self.decoder(decoder_input, decoder_hidden, encoder_output) # passing enc_output to the decoder
-                decoder_input = tf.expand_dims(p, 1)
+            for t in range(0, self.forward_window_length):
+                pred, dec_hidden, _ = self.decoder(decoder_input, decoder_hidden, encoder_output) # passing enc_output to the decoder
+                decoder_input = tf.expand_dims(pred, 1)
                 if t == 0:
-                    p2 = p
+                    p2 = pred
                 else:
-                    p2 = tf.concat([p2, p],1)
+                    p2 = tf.concat([p2, pred],1)
             
             predictions = p2
-            
+        
+        
+        
         return predictions
