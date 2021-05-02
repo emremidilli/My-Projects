@@ -17,9 +17,9 @@ import Calculate_Accuracy
 import shutil
 
 
-training_ratio = 0.7
-test_ratio = round(1 - training_ratio,2)
-scalers_dir = './__scalers__/'
+gc_dec_TRAINING_RATIO = 0.7
+gc_dec_TEST_RATIO = round(1 - gc_dec_TRAINING_RATIO,2)
+gc_s_SCALERS_PATH = './__scalers__/'
 
 def main():
     sql ="SELECT * FROM VW_MODELS --WHERE LATEST_STATUS_ID = 2"
@@ -40,7 +40,7 @@ def main():
             except OSError as e:
                  print("Error: %s - %s." % (e.filename, e.strerror))
             
-            tensor_input_train, tensor_input_test, tensor_target_train, tensor_target_test = train_test_split(df_input, df_target, test_size=test_ratio, shuffle=False)
+            tensor_input_train, tensor_input_test, tensor_target_train, tensor_target_test = train_test_split(df_input, df_target, test_size=gc_dec_TEST_RATIO, shuffle=False)
                         
             df_test_index = tensor_input_test.index
             
@@ -72,8 +72,8 @@ def main():
             prediction = prediction.set_index("INDEX")
             prediction.columns = tensor_target_test.columns
             
-            scaler_file_input = scalers_dir +  model_id + ' input.sav'
-            scaler_file_target = scalers_dir + model_id + ' target.sav'
+            scaler_file_input = gc_s_SCALERS_PATH +  model_id + ' input.sav'
+            scaler_file_target = gc_s_SCALERS_PATH + model_id + ' target.sav'
             
             pickle.dump(scaler_input, open(scaler_file_input, 'wb'))
             pickle.dump(scaler_target, open(scaler_file_target, 'wb'))
