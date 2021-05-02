@@ -7,6 +7,7 @@ Created on Tue Oct 20 20:55:10 2020
 
 import pandas as pd
 from Connect_to_Database import execute_sql
+import numpy as np
 
 
 # PREASSUMPTIONS:
@@ -104,19 +105,46 @@ def dfAddSeasonalFeatures(dfFeatureValues, dfTimeSteps):
         
         
 
-def aGetFeatureStatistics(iFeatureID):
-    sSql = "SELECT * FROM TBL_FEATURE_VALUES WHERE FEATURE_ID = " + str(iFeatureID)
+def dfGetFeatureStatistics(iFeatureID):
+    sSql = "SELECT VALUE FROM TBL_FEATURE_VALUES WHERE FEATURE_ID = " + str(iFeatureID)
     dfFeatureValues = execute_sql(sSql, "")
-    aFeatureStatistics = dfFeatureValues.describe()
+    dfFeatureStatistics = dfFeatureValues.describe()
+    dfFeatureStatistics = dfFeatureStatistics.transpose()
+    return dfFeatureStatistics
     
-    return aFeatureStatistics
+
+
+
+def dfGetAllStatistics():
+    sSql = "select ID, STREAM_SHORT_DESCRIPTION, SHORT_DESCRIPTION from VW_FEATURES WHERE SHORT_DESCRIPTION <> '<VOL>' order by STREAM_SHORT_DESCRIPTION, SHORT_DESCRIPTION"
+    dfFeatures = execute_sql(sSql, "")
+    
+    dfAllStatistics = None
+    for iIndex, aFeatures in dfFeatures.iterrows():
+
+        iFeatureId = aFeatures["ID"]
+
+        dfFeatureStatistics = dfGetFeatureStatistics(iFeatureId)
+        aFeatureStatistics = dfFeatureStatistics.iloc[0]
+        
+        if dfAllStatistics is None:
+            dfAllStatistics = pd.DataFrame(columns = dfFeatureStatistics.columns)
+        
+        dfAllStatistics = dfAllStatistics.append(aFeatureStatistics, ignore_index=True)
+        
+    dfAllStatistics[dfFeatures.columns] = dfFeatures
+    
+
+    
+    return dfAllStatistics
     
     
 
+
 def dfGetDimensionSize(dfTimeSteps):
-    feature_size = dfTimeSteps.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
-    window_length = dfTimeSteps.loc[["TIME_STEP"]].transpose().TIME_STEP.unique().size
-    return feature_size, window_length
+    iFeatureSize = dfTimeSteps.loc[["MODEL_FEATURE_ID"]].transpose().MODEL_FEATURE_ID.unique().size
+    iWindowLength = dfTimeSteps.loc[["TIME_STEP"]].transpose().TIME_STEP.unique().size
+    return iFeatureSize, iWindowLength
 
 
 def main(iModelId):
@@ -128,3 +156,5 @@ def main(iModelId):
     df_target= df_merged[df_target.columns]
     
     return  df_input, df_target ,dfTimeSteps_input, dfTimeSteps_target
+
+
