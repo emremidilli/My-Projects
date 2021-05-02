@@ -148,13 +148,11 @@ def dfGetDimensionSize(dfTimeSteps):
 
 
 def main(iModelId):
-    df_input, dfTimeSteps_input= dfGetFeatureValues(iModelId, "1")
-    df_target, dfTimeSteps_target = dfGetFeatureValues(iModelId, "2")
-    df_merged =pd.merge(df_input, df_target, left_index=True, right_index=True)
+    dfInput, dfTimeStepsInput= dfGetFeatureValues(iModelId, "1")
+    dfTarget, dfTimeStepsTarget = dfGetFeatureValues(iModelId, "2")
+    dfMerged =pd.merge(dfInput, dfTarget, left_index=True, right_index=True)
         
-    df_input = df_merged[df_input.columns]
-    df_target= df_merged[df_target.columns]
+    dfInput = dfMerged[dfInput.columns]
+    dfTarget= dfMerged[dfTarget.columns]
     
-    return  df_input, df_target ,dfTimeSteps_input, dfTimeSteps_target
-
-
+    return  dfInput, dfTarget ,dfTimeStepsInput, dfTimeStepsTarget
