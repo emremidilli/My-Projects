@@ -27,7 +27,7 @@ def sGetStreamID(sStream):
     sStreamID = str(dfStreamInDb["ID"][0])
     
     return sStreamID
-    
+
 
 
 def sGetFeatureID(sFeature, sStreamID):
