@@ -44,8 +44,8 @@ def main():
                 
                 if df_input.shape[0] > 0:
                                     
-                    scaler_file_input = Train.scalers_dir +  str(model_id) + ' input.sav'
-                    scaler_file_target = Train.scalers_dir +  str(model_id) + ' target.sav'
+                    scaler_file_input = Train.gc_s_SCALERS_PATH +  str(model_id) + ' input.sav'
+                    scaler_file_target = Train.gc_s_SCALERS_PATH +  str(model_id) + ' target.sav'
                     
                     scaler_input = pickle.load(open(scaler_file_input, 'rb'))
                     scaler_target = pickle.load(open(scaler_file_target, 'rb'))
@@ -57,7 +57,6 @@ def main():
                     
                     o_model_neural_attention = Neural_Attention_Mechanism.Neural_Attention_Mechanism(str(model_id), feature_size_x, feature_size_y, window_length_x, window_length_y)
                     prediction = o_model_neural_attention.predict(scaled_input)
-                    
                     
                     
                     prediction = scaler_target.inverse_transform(prediction)
