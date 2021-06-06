@@ -6,6 +6,7 @@ Created on Mon Aug 24 06:20:42 2020
 """
 
 import Neural_Attention_Mechanism
+import Multi_Layer_Perceptron
 import pandas as pd
 import numpy as np
 from Connect_to_Database import execute_sql
@@ -34,9 +35,9 @@ def main():
         if df_input.shape[0] == 0:
             result = 4
         else:
-            
+              
             try:
-                shutil.rmtree(model_id)
+                shutil.rmtree(model_id )
             except OSError as e:
                  print("Error: %s - %s." % (e.filename, e.strerror))
             
@@ -60,12 +61,17 @@ def main():
             scaler_input.partial_fit(tensor_input_test)
             scaler_target.partial_fit(tensor_target_test)
             scaled_input_test = scaler_input.transform(tensor_input_test)
-            scaled_target_test = scaler_target.transform(tensor_target_test) 
+            scaled_target_test = scaler_target.transform(tensor_target_test)
             
             o_model_neural_attention = Neural_Attention_Mechanism.Neural_Attention_Mechanism(model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
             o_model_neural_attention.train(scaled_input_train, scaled_target_train)
             prediction = o_model_neural_attention.predict(scaled_input_test)
-            
+
+            # oMultiLayerPerceptron = Multi_Layer_Perceptron.Multi_Layer_Perceptron(model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
+            # oMultiLayerPerceptron.set_hyperparameters(epoch_size = 10, batch_size=50)
+            # oMultiLayerPerceptron.train(scaled_input_train, scaled_target_train)
+            # prediction = oMultiLayerPerceptron.dfPredict(scaled_input_test)
+
             prediction = scaler_target.inverse_transform(prediction)
             prediction = pd.DataFrame(prediction)
             prediction["INDEX"] = df_test_index
@@ -108,4 +114,3 @@ def main():
 
 
 
-main()
