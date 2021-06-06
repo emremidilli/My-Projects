@@ -9,11 +9,11 @@ import pyodbc
 import pandas as pd
 
 
-conn_str= "Driver={SQL Server};Server=LAPTOP-LMC7DUJV\SQLEXPRESS;Database=DB_MY_PROJECT;Trusted_Connection=yes"
+gc_s_CONNECTION_STRING = "Driver={SQL Server};Server=LAPTOP-LMC7DUJV\SQLEXPRESS;Database=DB_MY_PROJECT;Trusted_Connection=yes"
 
 
 def execute_sql(sql_string, return_format=""):
-    cnxn = pyodbc.connect(conn_str)
+    cnxn = pyodbc.connect(gc_s_CONNECTION_STRING)
     df = pd.DataFrame()
     
     if return_format == "":
