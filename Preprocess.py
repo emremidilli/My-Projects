@@ -38,7 +38,6 @@ def dfGetFeatureValues(iModelId, iModelFeatureId, sFromTimeStamp = "DEFAULT", sT
         boundary= i_row["BOUNDARY"]
 
         
-
         if boundary == 0:
             dfFeatureValues[time_step_id] = 0
             
