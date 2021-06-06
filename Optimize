@@ -29,7 +29,7 @@ class variable_types(enum.Enum):
 
 
 class genetic_algorithm():
-    def __init__(self, fitness_function,dfObjectiveFunctions, dfDecisonVariables, iMaxNumberOfGenerations = 50, iPopulationSize = 5 , decSimilarityRatio = 0.75, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
+    def __init__(self, fitness_function,dfObjectiveFunctions, dfDecisonVariables, iMaxNumberOfGenerations = 50, iPopulationSize = 20, decSimilarityRatio = 0.75, decCrossoverRate = 0.5,decMutationRate = 0.05, decMutationCrowdingDegree = 0.4):
         self.fitness_function = fitness_function
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariables = dfDecisonVariables
@@ -53,7 +53,6 @@ class genetic_algorithm():
             decUpperBound = oRow["upper_bound"]
             toolbox.register(sLabel, variable_types.convert_to_random, eVariableType, decLowerBound, decUpperBound)
             
-            
             if sGeneOrder == "":
                 sGeneOrder = "toolbox."+sLabel
             else:
@@ -75,7 +74,7 @@ class genetic_algorithm():
         
             oIndividual1[cxpoint1:cxpoint2], oIndividual2[cxpoint1:cxpoint2] = oIndividual2[cxpoint1:cxpoint2].copy(), oIndividual1[cxpoint1:cxpoint2].copy()
                 
-            
+
             for i in range(len(oIndividual1)):
                 eVariableType = self.dfDecisonVariables["variable_type"][i]
                 decUpperBound = self.dfDecisonVariables["upper_bound"][i]
