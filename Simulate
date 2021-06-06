@@ -1,0 +1,195 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun May 30 14:19:00 2021
+
+@author: yunus
+"""
+
+import Train
+import Preprocess
+import Optimize_Portfolio
+from Connect_to_Database import execute_sql
+import Neural_Attention_Mechanism
+import pickle
+import pandas as pd
+
+
+
+gc_dec_SIMULATION_RUNS = 100
+gc_dec_INITIAL_BALANCE = 150
+gc_dec_MAX_RISK_MAPE = 0.15
+
+    
+    
+def dfPredict(sModelId, dtTimeStamp):
+    dfInput, dfTimeStepsInput = Preprocess.dfGetFeatureValues(sModelId, "1",dtTimeStamp, dtTimeStamp)
+    dfOutput, dfTimeStepsOutput = Preprocess.dfGetFeatureValues(sModelId, "2",dtTimeStamp, dtTimeStamp)
+    
+    dfFeatureSizeX, dfWindowLengthX = Preprocess.dfGetDimensionSize(dfTimeStepsInput)
+    dfFeatureSizeY ,dfWindowLengthY = Preprocess.dfGetDimensionSize(dfTimeStepsOutput)
+                
+    dfInputIndex = dfInput.index
+    
+    if dfInput.shape[0] > 0:
+                        
+        sScalerFilePathInput = Train.gc_s_SCALERS_PATH +  str(sModelId) + ' input.sav'
+        sScalerFilePathOutput = Train.gc_s_SCALERS_PATH +  str(sModelId) + ' target.sav'
+        
+        oScalerInput = pickle.load(open(sScalerFilePathInput, 'rb'))
+        oScalerOutput = pickle.load(open(sScalerFilePathOutput, 'rb'))
+        
+        oScalerInput.partial_fit(dfInput)
+        
+        dfInputScaled = oScalerInput.transform(dfInput)
+        
+        oNeuralAttentionModel = Neural_Attention_Mechanism.Neural_Attention_Mechanism(sModelId, dfFeatureSizeX, dfFeatureSizeY, dfWindowLengthX, dfWindowLengthY)
+        aPrediction = oNeuralAttentionModel.predict(dfInputScaled)
+        
+        aPrediction = oScalerOutput.inverse_transform(aPrediction)
+        dfPrediction = pd.DataFrame(aPrediction)
+        dfPrediction["INDEX"] = dfInputIndex
+        dfPrediction = dfPrediction.set_index("INDEX")
+        dfPrediction.columns = dfOutput.columns
+        
+        pickle.dump(oScalerInput, open(sScalerFilePathInput, 'wb'))
+        pickle.dump(oScalerOutput, open(sScalerFilePathOutput, 'wb'))
+        
+        
+        return dfPrediction
+    
+    
+    return None
+
+def dfGetModels():
+    sSql = "SELECT * FROM VW_MODELS WHERE LATEST_STATUS_ID = 5"
+    dfModels = execute_sql(sSql, "")
+
+    return dfModels
+
+
+def dfGetModelTimeSteps(sModelId, sFeatureTypeId):
+
+    sSql = "exec SP_GET_TIME_STEPS "+ sModelId +", " + sFeatureTypeId
+    dfModelTimeSteps = execute_sql(sSql, "")
+    
+    return dfModelTimeSteps
+
+
+def decGetExpectedSpreadRate(sModelId, dtTimeStamp):
+    
+    sSqlGetModelFeatures = "SELECT * FROM FN_GET_MODEL_FEATURES("+ sModelId +", 1)"
+    dfModelFeatures = execute_sql(sSqlGetModelFeatures, "")
+    
+    
+    iFeatureIdClose = dfModelFeatures[dfModelFeatures['FEATURE_SHORT_DESCRIPTION'] == '<CLOSE>']["FEATURE_ID"].values[0]
+    iFeatureIdSpread = dfModelFeatures[dfModelFeatures['FEATURE_SHORT_DESCRIPTION'] == '<SPREAD>']["FEATURE_ID"].values[0]
+    
+    
+    sSqlGetFeatureValuesClose = "SELECT * FROM VW_FEATURE_VALUES WHERE TIME_STAMP = '"+ dtTimeStamp +"' AND FEATURE_ID = " + str(iFeatureIdClose)
+    dfModelFeatureValuesClose = execute_sql(sSqlGetFeatureValuesClose, "")
+    
+
+    iRowNumberClose = dfModelFeatureValuesClose["ROW_NUMBER"].values[0]
+    iRowNumberClose = iRowNumberClose - 1
+    
+    
+    
+    sSqlGetFeatureValuesSpread = "SELECT * FROM VW_FEATURE_VALUES WHERE TIME_STAMP = '"+ dtTimeStamp +"' AND FEATURE_ID = " + str(iFeatureIdSpread)
+    dfModelFeatureValuesSpread = execute_sql(sSqlGetFeatureValuesSpread, "")
+    iRowNumberSpread = dfModelFeatureValuesSpread["ROW_NUMBER"].values[0]
+    iRowNumberSpread = iRowNumberSpread - 1    
+    
+    
+    
+    sSqlGetFeatureValuesClosePrev = "SELECT * FROM VW_FEATURE_VALUES WHERE ROW_NUMBER = " + str(iRowNumberClose)  +" AND FEATURE_ID = " + str(iFeatureIdClose)
+    dfFeatyreValuesClosePrev = execute_sql(sSqlGetFeatureValuesClosePrev, "")
+    decCloseValue = dfFeatyreValuesClosePrev["VALUE"].values[0]
+    
+    sSqlGetFeatureValuesSpreadPrev = "SELECT * FROM VW_FEATURE_VALUES WHERE ROW_NUMBER = " + str(iRowNumberSpread)  +" AND FEATURE_ID = " + str(iFeatureIdSpread)
+    dfFeatyreValuesSpreadPrev = execute_sql(sSqlGetFeatureValuesSpreadPrev, "")
+    decSpreadValue = dfFeatyreValuesSpreadPrev["VALUE"].values[0]
+    
+    decSpreadRatio = decSpreadValue/decCloseValue
+    
+    
+    return decSpreadRatio
+    
+    
+
+
+def dfGetPredictionErrorMape(sModelId, sModelDescription):
+    sSql = "SELECT * FROM FN_GET_AVG_MODEL_STATISTICS("+ sModelId +", 5)"
+    dfPredictionErrorMape = execute_sql(sSql, "")
+    dfPredictionErrorMape = dfPredictionErrorMape.set_index("TIME_STEP").transpose()
+    dfPredictionErrorMape.index =  [sModelDescription]
+    
+    
+    return dfPredictionErrorMape
+
+
+
+def dfConvertExpectedPrices(sModelDescription , dfPrediction, dfModelTimeSteps, dfForwardTimeSteps, sFeatureName):    
+    dfTimeSteps = dfModelTimeSteps[dfModelTimeSteps['FEATURE_SHORT_DESCRIPTION'] == sFeatureName]
+
+    dfExpectedPrices = dfPrediction[[*dfTimeSteps["ID"]]]
+
+    dfExpectedPrices.columns = dfForwardTimeSteps["TIME_STEP"]
+
+    
+    dfExpectedPrices.index =  [sModelDescription]
+
+    return dfExpectedPrices
+
+    
+
+
+def main():
+    dtTimeStamp = '2021-03-24 14:00:00.000'
+    
+    dfModels = dfGetModels()
+    
+    dfExpectedPricesClose = pd.DataFrame()
+    dfExpectedPricesOpen = pd.DataFrame()
+    dfExpectedSpread = pd.DataFrame()
+    dfPredictionErrorMape = pd.DataFrame()
+    
+    dfFinancialProducts = pd.DataFrame(dfModels["SHORT_DESCRIPTION"])
+    
+    
+    for i_iIndex, i_aRow in dfModels.iterrows():
+        sModelId = str(i_aRow["ID"])
+        sModelDescription = i_aRow["SHORT_DESCRIPTION"]
+        
+        
+        dfModelPredictionErrorMape = dfGetPredictionErrorMape(sModelId, sModelDescription)
+        
+        decSpreadRatio = decGetExpectedSpreadRate(sModelId, dtTimeStamp)
+        
+        dfModelTimeSteps = dfGetModelTimeSteps(sModelId, "2")
+        
+        dfForwardTimeSteps = pd.DataFrame(dfModelTimeSteps["TIME_STEP"].unique(), columns = ["TIME_STEP"])
+        
+        dfPrediction = dfPredict(sModelId , dtTimeStamp)
+        
+        dfExpectedModelPricesClose = dfConvertExpectedPrices(sModelDescription, dfPrediction, dfModelTimeSteps, dfForwardTimeSteps, '<CLOSE>')
+        dfExpectedModelPricesOpen = dfConvertExpectedPrices(sModelDescription, dfPrediction, dfModelTimeSteps, dfForwardTimeSteps, '<OPEN>')
+        
+        dfExpectedModelSpread = dfExpectedModelPricesClose * decSpreadRatio
+        
+        dfExpectedPricesOpen = dfExpectedPricesOpen.append(dfExpectedModelPricesOpen)
+        dfExpectedPricesClose = dfExpectedPricesClose.append(dfExpectedModelPricesClose)
+        dfExpectedSpread = dfExpectedSpread.append(dfExpectedModelSpread)
+        dfPredictionErrorMape = dfPredictionErrorMape.append(dfModelPredictionErrorMape)
+        
+    
+    oPortfolioManager = Optimize_Portfolio.PortfolioManagement(dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, gc_dec_INITIAL_BALANCE, gc_dec_MAX_RISK_MAPE, dfPredictionErrorMape)
+    dfOptimumResult = oPortfolioManager.Main()
+        
+
+    print(dfOptimumResult)
+    
+    
+    
+        
+main()
+
