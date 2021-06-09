@@ -230,7 +230,7 @@ class PortfolioManagement():
             else:
                 aBalances[iIndex] =  aBalances[iIndex - 1] +  decTotalReturn - decTotalAmount + decCapitalAmount
 
-            
+        aBalances = list(aBalances)
         return aBalances
 
     def EnsureNonNegativeReturns(self, aIndividualX, aIndividualY):
@@ -271,12 +271,56 @@ class PortfolioManagement():
             if decWeightedAverage > self.decMaximumRiskMape:
                 decMaxRisk = max(aWeightedRisks)
                 iIndexMaxRisk = aWeightedRisks.index(decMaxRisk)
-            
+                
                 aIndividualX[iIndexMaxRisk] = 0
                 aIndividualY[iIndexMaxRisk] = 0
             else:
                 break
 
+    def EnsureNonNegativeBalances(self, aIndividualX, aIndividualY):
+        aAmountsX =  list(aIndividualX)
+        aPositionsY = list(aIndividualY)
+        
+        aReturns = self.aCalculateReturns(aAmountsX , aPositionsY)
+        aBalances = self.aCalculateBalances(aReturns, aAmountsX)
+        
+        aNegativeBalances = [i for i in aBalances if i < 0]
+        
+        if len(aNegativeBalances) == 0:
+            return
+        
+        
+        decMinimumBalance = min(aNegativeBalances)
+        iIndexMinimumBalance = aBalances.index(decMinimumBalance)
+        
+        aAffectingIndices = self.dfIndices[self.dfIndices['j'] == iIndexMinimumBalance].index
+        
+        aAffectingReturns = np.array(aReturns)[aAffectingIndices]
+        aAffectingReturns = list(aAffectingReturns)
+        
+        
+        aNonZeroAffectingReturns = [i for i in aAffectingReturns if i != 0]
+        decMinAffectingReturn = min(aNonZeroAffectingReturns)
+        
+        
+        
+        iIndexMinAffectingReturn = aAffectingReturns.index(decMinAffectingReturn)
+        iIndexMinAffectingReturn = aAffectingIndices[iIndexMinAffectingReturn]
+        
+        
+        print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) +"*****" + str(aReturns[iIndexMinAffectingReturn]*aIndividualX[iIndexMinAffectingReturn]))
+        
+        aIndividualX[iIndexMinAffectingReturn] = 0
+        aIndividualY[iIndexMinAffectingReturn] = 0
+        
+        
+        
+        self.EnsureNonNegativeBalances(aIndividualX,aIndividualY)
+        
+
+        
+        
+        
 
     def aAdjustPopulation(self, aPopulationX,aPopulationY):
         for i in range(len(aPopulationX)):
@@ -286,34 +330,21 @@ class PortfolioManagement():
             self.EnsureVariableDependency(aIndividualX, aIndividualY)          
             self.EnsureNonNegativeReturns(aIndividualX, aIndividualY)
             self.EnsureRiskConstraint(aIndividualX, aIndividualY)
+            self.EnsureNonNegativeBalances(aIndividualX,aIndividualY)
+            
             aPopulationX[i] = aIndividualX
             aPopulationY[i] = aIndividualY
 
-
+    
+    
             
 
     def dfEvaluateFitness(self, aIndividualX, aIndividualY):
-        
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)
         
         aReturns = self.aCalculateReturns(aAmountsX , aPositionsY)
         aBalances = self.aCalculateBalances(aReturns, aAmountsX)
-
-        for i in range(len(aBalances)):
-            decBalance = aBalances[i]
-            
-            if decBalance < 0 :
-                aNonZero = [j for j in aReturns if j != 0]
-                                
-                decMinReturn = min(aNonZero)
-                iIndexMinReturn = aReturns.index(decMinReturn)
-
-                aIndividualX[iIndexMinReturn] = 0
-                aIndividualY[iIndexMinReturn] = 0
-                
-                return self.dfEvaluateFitness(aIndividualX, aIndividualY)
-            
         
         decFinalBalance =aBalances[len(aBalances)-1]
         decTotalProfit = decFinalBalance - self.decInitialBalance
@@ -333,11 +364,11 @@ class PortfolioManagement():
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.dfEvaluateFitness)
         
-        oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
+        # oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        # dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
-        # oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        # dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
+        oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
 
         return dfOptimumResult
 
@@ -517,7 +548,7 @@ class GeneticAlgorithm():
 
 
 class ParticleSwarmOptimization():
-    def __init__(self,oPortfolioManager, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20,iPopulationSize = 50 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
+    def __init__(self,oPortfolioManager, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 2,iPopulationSize = 10 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariablesX = dfDecisonVariablesX
