@@ -7,6 +7,7 @@ Created on Mon Mar  1 01:32:44 2021
 
 import pandas as pd
 import random
+import math
 import numpy as np
 from deap import base
 from deap import creator
@@ -14,6 +15,7 @@ from deap import tools
 import operator
 import enum
 from datetime import datetime
+
 
 
 gc_s_EXPECTED_PRICES_OPEN_PATH = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\EXPECTED PRICES OPEN.csv'
@@ -76,7 +78,7 @@ class PortfolioManagement():
             
             
             decPriceDiff = self.dfExpectedPricesClose.iloc[i][k] - self.dfExpectedPricesOpen.iloc[i][j]
-
+            decPriceDiff = decPriceDiff/self.dfExpectedPricesOpen.iloc[i][j]
             
             aPriceDiffs.append(decPriceDiff)
 
@@ -277,6 +279,11 @@ class PortfolioManagement():
             else:
                 break
 
+
+
+
+
+
     def EnsureNonNegativeBalances(self, aIndividualX, aIndividualY):
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)
@@ -298,22 +305,24 @@ class PortfolioManagement():
         aAffectingReturns = np.array(aReturns)[aAffectingIndices]
         aAffectingReturns = list(aAffectingReturns)
         
+    
+        aNonZeroAffectingReturns = [i for i in aAffectingReturns if i != 0]        
+        aNonZeroAffectingReturns = sorted(aNonZeroAffectingReturns)
         
-        aNonZeroAffectingReturns = [i for i in aAffectingReturns if i != 0]
-        decMinAffectingReturn = min(aNonZeroAffectingReturns)
+        decSearchConstant = 0.25
+        iNrOfElementsToSetZero = math.ceil((len(aNonZeroAffectingReturns))*decSearchConstant)
+        aNarrowedAffectingReturns = aNonZeroAffectingReturns[:iNrOfElementsToSetZero]
         
+        for decAffectingReturn in aNarrowedAffectingReturns:
+            iMinimumAffectingReturnIndex = aAffectingReturns.index(decAffectingReturn)
+            iMinimumAffectingReturnIndex = aAffectingIndices[iMinimumAffectingReturnIndex]
         
+            aIndividualX[iMinimumAffectingReturnIndex] = 0
+            aIndividualY[iMinimumAffectingReturnIndex] = 0
+
         
-        iIndexMinAffectingReturn = aAffectingReturns.index(decMinAffectingReturn)
-        iIndexMinAffectingReturn = aAffectingIndices[iIndexMinAffectingReturn]
-        
-        
-        print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) +"*****" + str(aReturns[iIndexMinAffectingReturn]*aIndividualX[iIndexMinAffectingReturn]))
-        
-        aIndividualX[iIndexMinAffectingReturn] = 0
-        aIndividualY[iIndexMinAffectingReturn] = 0
-        
-        
+        print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) + "*****"  )
+            
         
         self.EnsureNonNegativeBalances(aIndividualX,aIndividualY)
         
