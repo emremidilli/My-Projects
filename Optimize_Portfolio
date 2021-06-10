@@ -307,22 +307,25 @@ class PortfolioManagement():
         
     
         aNonZeroAffectingReturns = [i for i in aAffectingReturns if i != 0]        
-        aNonZeroAffectingReturns = sorted(aNonZeroAffectingReturns)
+        # aNonZeroAffectingReturns = sorted(aNonZeroAffectingReturns)
         
-        decSearchConstant = 0.25
-        iNrOfElementsToSetZero = math.ceil((len(aNonZeroAffectingReturns))*decSearchConstant)
-        aNarrowedAffectingReturns = aNonZeroAffectingReturns[:iNrOfElementsToSetZero]
+        decMinAffectingReturn =min(aNonZeroAffectingReturns)
+        # decSearchConstant = 0.25
+        # iNrOfElementsToSetZero = math.ceil((len(aNonZeroAffectingReturns))*decSearchConstant)
+        # aNarrowedAffectingReturns = aNonZeroAffectingReturns[:iNrOfElementsToSetZero]
         
-        for decAffectingReturn in aNarrowedAffectingReturns:
-            iMinimumAffectingReturnIndex = aAffectingReturns.index(decAffectingReturn)
-            iMinimumAffectingReturnIndex = aAffectingIndices[iMinimumAffectingReturnIndex]
+        # for decMinAffectingReturn in aNarrowedAffectingReturns:
+        iMinimumAffectingReturnIndex = aAffectingReturns.index(decMinAffectingReturn)
+        iMinimumAffectingReturnIndex = aAffectingIndices[iMinimumAffectingReturnIndex]
         
-            aIndividualX[iMinimumAffectingReturnIndex] = 0
-            aIndividualY[iMinimumAffectingReturnIndex] = 0
+        print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) + "*****" + str(decMinimumBalance) + "*****" + str(aIndividualX[iMinimumAffectingReturnIndex]) + "*****" + str(decMinAffectingReturn) + "******" +  str(aIndividualY[iMinimumAffectingReturnIndex]))
+          
+    
+        aIndividualX[iMinimumAffectingReturnIndex] = 0
+        aIndividualY[iMinimumAffectingReturnIndex] = 0
 
         
-        print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) + "*****"  )
-            
+    
         
         self.EnsureNonNegativeBalances(aIndividualX,aIndividualY)
         
