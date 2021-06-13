@@ -35,7 +35,7 @@ class PortfolioManagement():
         self.dfFinancialProducts = dfFinancialProducts
         self.decInitialBalance = decInitialBalance
         self.dfIndices = self.dfGetIndices()
-        self.aPriceDiffs = self.aGetPriceDiffs()
+        self.aPriceDiffs = self.aGetPriceDiffs(self.dfExpectedPricesClose, self.dfExpectedPricesOpen)
         self.decStepSizeRatio = 0.01
         self.aAverageRisks = self.aGetAverageRisks(dfPredictionErrorMape)
         self.decMaximumRiskMape = decMaximumRiskMape
@@ -68,7 +68,7 @@ class PortfolioManagement():
         return dfIndices        
 
 
-    def aGetPriceDiffs(self):
+    def aGetPriceDiffs(self, dfPricesClose, dfPricesOpen):
         
         aPriceDiffs = []
         for iIndex, aRow in self.dfIndices.iterrows():
@@ -77,8 +77,8 @@ class PortfolioManagement():
             k = aRow["k"]
             
             
-            decPriceDiff = self.dfExpectedPricesClose.iloc[i][k] - self.dfExpectedPricesOpen.iloc[i][j]
-            decPriceDiff = decPriceDiff/self.dfExpectedPricesOpen.iloc[i][j]
+            decPriceDiff = dfPricesClose.iloc[i][k] - dfPricesOpen.iloc[i][j]
+            decPriceDiff = decPriceDiff/dfPricesOpen.iloc[i][j]
             
             aPriceDiffs.append(decPriceDiff)
 
@@ -183,11 +183,12 @@ class PortfolioManagement():
         
         for iIndex, aRow in self.dfIndices.iterrows():
             i = aRow["i"]
-            k = aRow["k"]
+            j = aRow["j"]
             
-            decSpread = self.dfExpectedSpread.iloc[i,k]
+            decSpread = self.dfExpectedSpread.iloc[i,j]
+            decSpreadRatio = decSpread/self.dfExpectedPricesOpen.iloc[i,j]
             decReturn = self.aPriceDiffs[iIndex] * aAmountsX[iIndex] * aPositionsY[iIndex]
-            decLossDueToSpread = abs(aPositionsY[iIndex])*aAmountsX[iIndex]*decSpread
+            decLossDueToSpread = abs(aPositionsY[iIndex])*aAmountsX[iIndex]*decSpreadRatio
 
             decReturn = decReturn - decLossDueToSpread
 
@@ -318,15 +319,17 @@ class PortfolioManagement():
         iMinimumAffectingReturnIndex = aAffectingReturns.index(decMinAffectingReturn)
         iMinimumAffectingReturnIndex = aAffectingIndices[iMinimumAffectingReturnIndex]
         
-        print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) + "*****" + str(decMinimumBalance) + "*****" + str(aIndividualX[iMinimumAffectingReturnIndex]) + "*****" + str(decMinAffectingReturn) + "******" +  str(aIndividualY[iMinimumAffectingReturnIndex]))
+        
+        i = self.dfIndices.iloc[iMinimumAffectingReturnIndex].i
+        j = iIndexMinimumBalance
+        k = self.dfIndices.iloc[iMinimumAffectingReturnIndex].k
+        
+        print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) + "*****" + str(decMinimumBalance) + "*****" + str(aIndividualX[iMinimumAffectingReturnIndex]) + "*****" + str(decMinAffectingReturn) + "******" +  str(aIndividualY[iMinimumAffectingReturnIndex]) + "******" + str(i)+ "******" + str(j)+ "******" + str(k))
           
     
         aIndividualX[iMinimumAffectingReturnIndex] = 0
         aIndividualY[iMinimumAffectingReturnIndex] = 0
 
-        
-    
-        
         self.EnsureNonNegativeBalances(aIndividualX,aIndividualY)
         
 
@@ -376,11 +379,11 @@ class PortfolioManagement():
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.dfEvaluateFitness)
         
-        # oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        # dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
+        oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
-        oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
+        # oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        # dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
 
         return dfOptimumResult
 
@@ -560,7 +563,7 @@ class GeneticAlgorithm():
 
 
 class ParticleSwarmOptimization():
-    def __init__(self,oPortfolioManager, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 2,iPopulationSize = 10 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
+    def __init__(self,oPortfolioManager, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 5,iPopulationSize = 10 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariablesX = dfDecisonVariablesX
