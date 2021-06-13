@@ -41,7 +41,7 @@ class PortfolioManagement():
         self.decMaximumRiskMape = decMaximumRiskMape
         
         
-        
+
     def dfGetIndices(self):
         aI = []
         aJ = []
@@ -201,40 +201,36 @@ class PortfolioManagement():
         
         aBalances = np.zeros(self.dfForwardTimeSteps.shape[0])
         
-        for iIndex, iRow in self.dfForwardTimeSteps.iterrows():
+        
+        for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
             
-            decTotalReturn = 0
-            decTotalAmount = 0
-            decCapitalAmount = 0
+            aIndicesOfClosingOrder = self.dfIndices[self.dfIndices['k'] == jIndex].index
+            aIndicesOfOpeningOrder = self.dfIndices[self.dfIndices['j'] == jIndex].index
             
-            for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
-                
-                for kIndex, kRow in self.dfFinancialProducts.iterrows():
-                    
-                    dfIndicAmounts = self.dfIndices[(self.dfIndices.i == kIndex) & (self.dfIndices.j == iIndex) & (self.dfIndices.k == jIndex)]
-                    dfIndicReturns = self.dfIndices[(self.dfIndices.i == kIndex) & (self.dfIndices.j == jIndex) & (self.dfIndices.k == iIndex)]
-                    dfIndicCapitalAmounts = self.dfIndices[(self.dfIndices.i == kIndex) & (self.dfIndices.j == jIndex) & (self.dfIndices.k == iIndex)]
-                    
-                    if dfIndicReturns.empty == False:
-                        iIndiceReturn = dfIndicReturns.index[0]
-                        decTotalReturn = decTotalReturn + aReturns[iIndiceReturn]
-                    
-                    if dfIndicAmounts.empty == False:
-                        iIndiceAmount = dfIndicAmounts.index[0]
-                        decTotalAmount = decTotalAmount + aAmounts[iIndiceAmount]
-
-                    if dfIndicCapitalAmounts.empty == False:
-                        iIndiceCapitalAmount = dfIndicCapitalAmounts.index[0]
-                        decCapitalAmount = decCapitalAmount + aAmounts[iIndiceCapitalAmount]
-                        
-
-            if iIndex == 0:
-                 aBalances[iIndex] =  self.decInitialBalance +  decTotalReturn - decTotalAmount + decCapitalAmount
+            aProfitsToBeReturned =  np.array(aReturns)[aIndicesOfClosingOrder]
+            aProfitsToBeReturned = list(aProfitsToBeReturned)
+            
+            aCapitalsToBeReturned = np.array(aAmounts)[aIndicesOfClosingOrder]
+            aCapitalsToBeReturned = list(aCapitalsToBeReturned)
+            
+            aCapitalsToBeInvested = np.array(aAmounts)[aIndicesOfOpeningOrder]
+            aCapitalsToBeInvested = list(aCapitalsToBeInvested)            
+            
+            
+            decProfitToBeReturned = sum(aProfitsToBeReturned)
+            decCapitalToBeReturned = sum(aCapitalsToBeReturned)
+            decCapitalToBeInvested = sum(aCapitalsToBeInvested)
+            
+            
+            if jIndex == 0:
+                 aBalances[jIndex] =  self.decInitialBalance +  decCapitalToBeReturned + decProfitToBeReturned - decCapitalToBeInvested
             else:
-                aBalances[iIndex] =  aBalances[iIndex - 1] +  decTotalReturn - decTotalAmount + decCapitalAmount
-
+                aBalances[jIndex] =  aBalances[jIndex - 1] +  decCapitalToBeReturned + decProfitToBeReturned - decCapitalToBeInvested
+            
         aBalances = list(aBalances)
         return aBalances
+    
+    
 
     def EnsureNonNegativeReturns(self, aIndividualX, aIndividualY):
         aAmountsX =  list(aIndividualX)
@@ -308,14 +304,9 @@ class PortfolioManagement():
         
     
         aNonZeroAffectingReturns = [i for i in aAffectingReturns if i != 0]        
-        # aNonZeroAffectingReturns = sorted(aNonZeroAffectingReturns)
-        
+
         decMinAffectingReturn =min(aNonZeroAffectingReturns)
-        # decSearchConstant = 0.25
-        # iNrOfElementsToSetZero = math.ceil((len(aNonZeroAffectingReturns))*decSearchConstant)
-        # aNarrowedAffectingReturns = aNonZeroAffectingReturns[:iNrOfElementsToSetZero]
-        
-        # for decMinAffectingReturn in aNarrowedAffectingReturns:
+
         iMinimumAffectingReturnIndex = aAffectingReturns.index(decMinAffectingReturn)
         iMinimumAffectingReturnIndex = aAffectingIndices[iMinimumAffectingReturnIndex]
         
@@ -379,11 +370,11 @@ class PortfolioManagement():
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.dfEvaluateFitness)
         
-        oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
+        # oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        # dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
-        # oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        # dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
+        oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
 
         return dfOptimumResult
 
@@ -563,7 +554,7 @@ class GeneticAlgorithm():
 
 
 class ParticleSwarmOptimization():
-    def __init__(self,oPortfolioManager, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 5,iPopulationSize = 10 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
+    def __init__(self,oPortfolioManager, FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY, iMaxNumberOfGenerations = 20,iPopulationSize = 50 , decSimilarityRatio = 1, decInertiaWeight = 0.5, decExplotationCoefficient= 0.25, decExplorationCoefficient= 0.25):
         self.FitnessFunction = FitnessFunction
         self.dfObjectiveFunctions = dfObjectiveFunctions
         self.dfDecisonVariablesX = dfDecisonVariablesX
