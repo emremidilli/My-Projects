@@ -17,7 +17,7 @@ import pandas as pd
 
 gc_dec_SIMULATION_RUNS = 100
 gc_dec_INITIAL_BALANCE = 150
-gc_dec_MAX_RISK_MAPE = 0.15
+gc_dec_MAX_RISK_MAPE = 15
 
     
     
@@ -66,14 +66,12 @@ def dfGetModels():
 
     return dfModels
 
-
 def dfGetModelTimeSteps(sModelId, sFeatureTypeId):
 
     sSql = "exec SP_GET_TIME_STEPS "+ sModelId +", " + sFeatureTypeId
     dfModelTimeSteps = execute_sql(sSql, "")
     
     return dfModelTimeSteps
-
 
 def decGetExpectedSpreadRate(sModelId, dtTimeStamp):
     
@@ -114,9 +112,6 @@ def decGetExpectedSpreadRate(sModelId, dtTimeStamp):
     
     return decSpreadRatio
     
-    
-
-
 def dfGetPredictionErrorMape(sModelId, sModelDescription):
     sSql = "SELECT * FROM FN_GET_AVG_MODEL_STATISTICS("+ sModelId +", 5)"
     dfPredictionErrorMape = execute_sql(sSql, "")
@@ -125,8 +120,6 @@ def dfGetPredictionErrorMape(sModelId, sModelDescription):
     
     
     return dfPredictionErrorMape
-
-
 
 def dfConvertExpectedPrices(sModelDescription , dfPrediction, dfModelTimeSteps, dfForwardTimeSteps, sFeatureName):    
     dfTimeSteps = dfModelTimeSteps[dfModelTimeSteps['FEATURE_SHORT_DESCRIPTION'] == sFeatureName]
@@ -140,7 +133,9 @@ def dfConvertExpectedPrices(sModelDescription , dfPrediction, dfModelTimeSteps, 
 
     return dfExpectedPrices
 
-    
+
+# def dfGetActualPrices(sModelId, ):
+#     sSql = 
 
 
 def main():
@@ -159,8 +154,7 @@ def main():
     for i_iIndex, i_aRow in dfModels.iterrows():
         sModelId = str(i_aRow["ID"])
         sModelDescription = i_aRow["SHORT_DESCRIPTION"]
-        
-        
+    
         dfModelPredictionErrorMape = dfGetPredictionErrorMape(sModelId, sModelDescription)
         
         decSpreadRatio = decGetExpectedSpreadRate(sModelId, dtTimeStamp)
