@@ -345,7 +345,7 @@ class PortfolioManagement():
     
             
 
-    def dfEvaluateFitness(self, aIndividualX, aIndividualY):
+    def decEvaluateFitness(self, aIndividualX, aIndividualY):
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)
         
@@ -368,15 +368,18 @@ class PortfolioManagement():
         creator.create("FitnessFunction", base.Fitness, weights=(1.0,))        
         
         oToolbox = base.Toolbox()
-        oToolbox.register("evaluate", self.dfEvaluateFitness)
+        oToolbox.register("evaluate", self.decEvaluateFitness)
         
         # oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        # dfOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
+        # aOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
         oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        dfOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)    
+        aOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)
+        
+        aOptimumAmounts, aOptiumumPositions = np.array_split(aOptimumResult, 2)
+        
 
-        return dfOptimumResult
+        return aOptimumAmounts, aOptiumumPositions
 
 
 class variable_types(enum.Enum):
