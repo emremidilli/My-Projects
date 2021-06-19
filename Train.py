@@ -21,6 +21,10 @@ import shutil
 gc_dec_TRAINING_RATIO = 0.7
 gc_dec_TEST_RATIO = round(1 - gc_dec_TRAINING_RATIO,2)
 gc_s_SCALERS_PATH = './__scalers__/'
+gc_dt_FROM_DATE = "DEFAULT"
+gc_dt_TO_DATE = "DEFAULT"
+
+
 
 def main():
     sql ="SELECT * FROM VW_MODELS --WHERE LATEST_STATUS_ID = 2"
@@ -30,7 +34,7 @@ def main():
         model_id = str(i_row["ID"])
         
         execute_sql("EXEC SP_UPDATE_MODEL_STATUS '"+model_id+"', 3, 1")
-        df_input, df_target, df_time_steps_input, df_time_steps_target = Preprocess.main(model_id)
+        df_input, df_target, df_time_steps_input, df_time_steps_target = Preprocess.main(model_id, gc_dt_FROM_DATE, gc_dt_TO_DATE)
         
         if df_input.shape[0] == 0:
             result = 4
@@ -99,7 +103,7 @@ def main():
                     y_pred = np.array(prediction[time_step_id])
                     
                     mse, mae, r, r2, mape, count, exp_var = Calculate_Accuracy.main(y_true, y_pred)
-                                        
+
                     sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 1 ,"+ str(count) + "; "                    
                     sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 2 ,"+ str(r2)+ "; "                    
                     sql =sql + "EXEC SP_ADD_TEST "+str(time_step_id)+", 3 ,"+ str(mae)+ "; "                         
