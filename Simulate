@@ -18,6 +18,8 @@ import pandas as pd
 gc_dec_SIMULATION_RUNS = 100
 gc_dec_INITIAL_BALANCE = 150
 gc_dec_MAX_RISK_MAPE = 15
+gc_dt_FROM_DATE = "DEFAULT"
+gc_dt_TO_DATE = "DEFAULT"
 
     
     
@@ -61,7 +63,7 @@ def dfPredict(sModelId, dtTimeStamp):
     return None
 
 def dfGetModels():
-    sSql = "SELECT * FROM VW_MODELS WHERE LATEST_STATUS_ID = 5"
+    sSql = "SELECT TOP 3 * FROM VW_MODELS WHERE LATEST_STATUS_ID = 5"
     dfModels = execute_sql(sSql, "")
 
     return dfModels
@@ -85,11 +87,10 @@ def decGetExpectedSpreadRate(sModelId, dtTimeStamp):
     
     sSqlGetFeatureValuesClose = "SELECT * FROM VW_FEATURE_VALUES WHERE TIME_STAMP = '"+ dtTimeStamp +"' AND FEATURE_ID = " + str(iFeatureIdClose)
     dfModelFeatureValuesClose = execute_sql(sSqlGetFeatureValuesClose, "")
-    
+
 
     iRowNumberClose = dfModelFeatureValuesClose["ROW_NUMBER"].values[0]
     iRowNumberClose = iRowNumberClose - 1
-    
     
     
     sSqlGetFeatureValuesSpread = "SELECT * FROM VW_FEATURE_VALUES WHERE TIME_STAMP = '"+ dtTimeStamp +"' AND FEATURE_ID = " + str(iFeatureIdSpread)
@@ -98,14 +99,14 @@ def decGetExpectedSpreadRate(sModelId, dtTimeStamp):
     iRowNumberSpread = iRowNumberSpread - 1    
     
     
-    
     sSqlGetFeatureValuesClosePrev = "SELECT * FROM VW_FEATURE_VALUES WHERE ROW_NUMBER = " + str(iRowNumberClose)  +" AND FEATURE_ID = " + str(iFeatureIdClose)
-    dfFeatyreValuesClosePrev = execute_sql(sSqlGetFeatureValuesClosePrev, "")
-    decCloseValue = dfFeatyreValuesClosePrev["VALUE"].values[0]
-    
+    dfFeatureValuesClosePrev = execute_sql(sSqlGetFeatureValuesClosePrev, "")
+    decCloseValue = dfFeatureValuesClosePrev["VALUE"].values[0]
+
+
     sSqlGetFeatureValuesSpreadPrev = "SELECT * FROM VW_FEATURE_VALUES WHERE ROW_NUMBER = " + str(iRowNumberSpread)  +" AND FEATURE_ID = " + str(iFeatureIdSpread)
-    dfFeatyreValuesSpreadPrev = execute_sql(sSqlGetFeatureValuesSpreadPrev, "")
-    decSpreadValue = dfFeatyreValuesSpreadPrev["VALUE"].values[0]
+    dfFeatureValuesSpreadPrev = execute_sql(sSqlGetFeatureValuesSpreadPrev, "")
+    decSpreadValue = dfFeatureValuesSpreadPrev["VALUE"].values[0]
     
     decSpreadRatio = decSpreadValue/decCloseValue
     
@@ -128,27 +129,52 @@ def dfConvertExpectedPrices(sModelDescription , dfPrediction, dfModelTimeSteps, 
 
     dfExpectedPrices.columns = dfForwardTimeSteps["TIME_STEP"]
 
-    
     dfExpectedPrices.index =  [sModelDescription]
 
     return dfExpectedPrices
 
 
-# def dfGetActualPrices(sModelId, ):
-#     sSql = 
+def dfGetActualSpread(sModelId,sModelDescription,  dtTimeStamp, dfForwardTimeSteps):        
+    sSqlGetModelFeatures = "SELECT * FROM FN_GET_MODEL_FEATURES("+ sModelId +", 1)"
+    dfModelFeatures = execute_sql(sSqlGetModelFeatures, "")
+    
+    
+    iFeatureIdSpread = dfModelFeatures[dfModelFeatures['FEATURE_SHORT_DESCRIPTION'] == '<SPREAD>']["FEATURE_ID"].values[0]
+    sSqlGetFeatureValuesSpread = "SELECT * FROM VW_FEATURE_VALUES WHERE TIME_STAMP = '"+ dtTimeStamp +"' AND FEATURE_ID = " + str(iFeatureIdSpread)
+    dfModelFeatureValuesSpread = execute_sql(sSqlGetFeatureValuesSpread, "")
+    iRowNumberSpread = dfModelFeatureValuesSpread["ROW_NUMBER"].values[0]
+    
+    
+    sSqlGetFeatureValuesSpread = "SELECT * FROM VW_FEATURE_VALUES WHERE ROW_NUMBER BETWEEN " + str(iRowNumberSpread + int(dfForwardTimeSteps.min())) + " AND " + str(iRowNumberSpread + int(dfForwardTimeSteps.max())) + " AND FEATURE_ID = " + str(iFeatureIdSpread)
+    dfFeatureValuesSpread = execute_sql(sSqlGetFeatureValuesSpread, "")
+    dfFeatureValuesSpread = pd.DataFrame(dfFeatureValuesSpread["VALUE"])
+    
+    dfFeatureValuesSpread = dfFeatureValuesSpread.transpose()
+    
+    dfFeatureValuesSpread.index = [sModelDescription]
+    
+    return dfFeatureValuesSpread
+
+
+    
+    
 
 
 def main():
     dtTimeStamp = '2021-03-24 14:00:00.000'
     
     dfModels = dfGetModels()
+    dfFinancialProducts = pd.DataFrame(dfModels["SHORT_DESCRIPTION"])
     
     dfExpectedPricesClose = pd.DataFrame()
     dfExpectedPricesOpen = pd.DataFrame()
     dfExpectedSpread = pd.DataFrame()
     dfPredictionErrorMape = pd.DataFrame()
     
-    dfFinancialProducts = pd.DataFrame(dfModels["SHORT_DESCRIPTION"])
+    dfActualPricesClose = pd.DataFrame()
+    dfActualPricesOpen = pd.DataFrame()
+    dfActualSpread = pd.DataFrame()
+    
     
     
     for i_iIndex, i_aRow in dfModels.iterrows():
@@ -175,10 +201,30 @@ def main():
         dfExpectedSpread = dfExpectedSpread.append(dfExpectedModelSpread)
         dfPredictionErrorMape = dfPredictionErrorMape.append(dfModelPredictionErrorMape)
         
-    
-    oPortfolioManager = Optimize_Portfolio.PortfolioManagement(dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, gc_dec_INITIAL_BALANCE, gc_dec_MAX_RISK_MAPE, dfPredictionErrorMape)
-    dfOptimumResult = oPortfolioManager.Main()
         
+        dfActual, _ = Preprocess.dfGetFeatureValues(sModelId, "2",dtTimeStamp, dtTimeStamp)
+        
+        dfActualModelPricesClose = dfConvertExpectedPrices(sModelDescription, dfActual, dfModelTimeSteps, dfForwardTimeSteps, '<CLOSE>')
+        dfActualModelPricesOpen = dfConvertExpectedPrices(sModelDescription, dfActual, dfModelTimeSteps, dfForwardTimeSteps, '<OPEN>')
+        dfActualModelSpread = dfGetActualSpread(sModelId,sModelDescription,  dtTimeStamp, dfForwardTimeSteps)
+        
+        dfActualPricesClose = dfActualPricesClose.append(dfActualModelPricesClose)
+        dfActualPricesOpen = dfActualPricesOpen.append(dfActualModelPricesOpen)
+        dfActualSpread = dfActualSpread.append(dfActualModelSpread)
+        
+    
+    oPortfolioManagerExpected = Optimize_Portfolio.PortfolioManagement(dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, gc_dec_INITIAL_BALANCE, gc_dec_MAX_RISK_MAPE, dfPredictionErrorMape)
+    aOptimumAmounts, aOptiumumPositions = oPortfolioManagerExpected.Main()
+    
+    decExpectedProfit = oPortfolioManagerExpected.decEvaluateFitness(aOptimumAmounts, aOptiumumPositions)
+    
+    
+    oActualPortfolioManager = Optimize_Portfolio.PortfolioManagement(dfActualPricesClose ,dfActualPricesOpen, dfActualSpread, dfFinancialProducts , dfForwardTimeSteps, gc_dec_INITIAL_BALANCE, gc_dec_MAX_RISK_MAPE, dfPredictionErrorMape)
+    decActualProfit = oActualPortfolioManager.decEvaluateFitness(aOptimumAmounts, aOptiumumPositions)
+    
+    
+    
+
 
     print(dfOptimumResult)
     
