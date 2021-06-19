@@ -146,9 +146,9 @@ def dfGetDimensionSize(dfTimeSteps):
     return iFeatureSize, iWindowLength
 
 
-def main(iModelId):
-    dfInput, dfTimeStepsInput= dfGetFeatureValues(iModelId, "1")
-    dfTarget, dfTimeStepsTarget = dfGetFeatureValues(iModelId, "2")
+def main(iModelId, sFromTimeStamp = "DEFAULT", sToTimeStamp = "DEFAULT" ):
+    dfInput, dfTimeStepsInput= dfGetFeatureValues(iModelId, "1", sFromTimeStamp , sToTimeStamp)
+    dfTarget, dfTimeStepsTarget = dfGetFeatureValues(iModelId, "2", sFromTimeStamp, sToTimeStamp)
     dfMerged =pd.merge(dfInput, dfTarget, left_index=True, right_index=True)
         
     dfInput = dfMerged[dfInput.columns]
