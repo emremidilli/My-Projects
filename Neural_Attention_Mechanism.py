@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Apr 10 14:26:30 2020
-
-@author: Yunus Emre Midilli
-
-Considered that incoming training and to-be predicted data are already scaled.
-"""
-
 # https://www.tensorflow.org/tutorials/text/nmt_with_attention#translate
 
 import numpy as np
