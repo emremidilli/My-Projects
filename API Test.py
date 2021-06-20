@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jun  8 01:21:21 2020
-
-@author: Yunus Emre Midilli
-"""
-
 import flask
 from flask import request
 import numpy as np
@@ -16,9 +9,9 @@ error_msg = "Error: Please enter all fields correctly."
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 prefix = '/api/v1/'
-host_ip = '192.168.1.37'
+host_ip = '192.168.43.116'
 
-
+# http://192.168.43.116:5000/api/v1/models
 @app.route(prefix + 'models', methods=['GET'])
 def get_models():
     models= execute_sql("SELECT * FROM VW_MODELS","json")
