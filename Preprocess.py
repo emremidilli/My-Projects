@@ -147,7 +147,7 @@ def dfGetDimensionSize(dfTimeSteps):
 
 
 def dfGetModels():
-    sSql = "SELECT top 5 * FROM VW_MODELS order BY SHORT_DESCRIPTION desc"
+    sSql = "SELECT top 5 * FROM VW_MODELS order BY SHORT_DESCRIPTION asc"
     dfModels = execute_sql(sSql, "")
 
     return dfModels
