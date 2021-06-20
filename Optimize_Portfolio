@@ -315,7 +315,7 @@ class PortfolioManagement():
         j = iIndexMinimumBalance
         k = self.dfIndices.iloc[iMinimumAffectingReturnIndex].k
         
-        print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) + "*****" + str(decMinimumBalance) + "*****" + str(aIndividualX[iMinimumAffectingReturnIndex]) + "*****" + str(decMinAffectingReturn) + "******" +  str(aIndividualY[iMinimumAffectingReturnIndex]) + "******" + str(i)+ "******" + str(j)+ "******" + str(k))
+        # print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) + "*****" + str(decMinimumBalance) + "*****" + str(aIndividualX[iMinimumAffectingReturnIndex]) + "*****" + str(decMinAffectingReturn) + "******" +  str(aIndividualY[iMinimumAffectingReturnIndex]) + "******" + str(i)+ "******" + str(j)+ "******" + str(k))
           
     
         aIndividualX[iMinimumAffectingReturnIndex] = 0
@@ -370,11 +370,11 @@ class PortfolioManagement():
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.decEvaluateFitness)
         
-        # oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        # aOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
+        oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        aOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
-        oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        aOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)
+        # oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        # aOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)
         
         aOptimumAmounts, aOptiumumPositions = np.array_split(aOptimumResult, 2)
         
@@ -552,7 +552,7 @@ class GeneticAlgorithm():
         aBestIndFull = aBestIndX + aBestIndY
         ResultLogs.LogToOutputFile(oOutputFile, "OPTIMUM RESULT", "", aBestIndFull, aBestIndX.fitness.values)
                 
-        return 
+        return aBestIndFull
 
 
 
