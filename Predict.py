@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Aug 30 02:42:17 2020
-
-@author: yunus emre midilli
-"""
-
 import Train
 import Preprocess
 from Connect_to_Database import execute_sql
