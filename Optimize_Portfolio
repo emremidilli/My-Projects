@@ -1,6 +1,5 @@
 import pandas as pd
 import random
-import math
 import numpy as np
 from deap import base
 from deap import creator
@@ -8,6 +7,7 @@ from deap import tools
 import operator
 import enum
 from datetime import datetime
+
 
 
 class PortfolioManagement():
