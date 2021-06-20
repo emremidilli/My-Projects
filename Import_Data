@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Apr 24 14:57:31 2021
-
-@author: yunus
-"""
 import pandas as pd
 import os
 import Connect_to_Database
