@@ -352,7 +352,7 @@ class PortfolioManagement():
         aReturns = self.aCalculateReturns(aAmountsX , aPositionsY)
         aBalances = self.aCalculateBalances(aReturns, aAmountsX)
         
-        decFinalBalance =aBalances[len(aBalances)-1]
+        decFinalBalance = aBalances[len(aBalances)-1]
         decTotalProfit = decFinalBalance - self.decInitialBalance
         
         return decTotalProfit
@@ -370,11 +370,11 @@ class PortfolioManagement():
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.decEvaluateFitness)
         
-        oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        aOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
+        # oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        # aOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
-        # oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        # aOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)
+        oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        aOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)
         
         aOptimumAmounts, aOptiumumPositions = np.array_split(aOptimumResult, 2)
         
