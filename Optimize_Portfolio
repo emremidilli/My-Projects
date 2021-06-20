@@ -10,14 +10,6 @@ import enum
 from datetime import datetime
 
 
-
-gc_s_EXPECTED_PRICES_OPEN_PATH = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\EXPECTED PRICES OPEN.csv'
-gc_s_EXPECTED_PRICES_CLOSE_PATH = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\EXPECTED PRICES CLOSE.csv'
-gc_s_EXPECTED_SPREAD_PATH = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\EXPECTED SPREAD.csv'
-gc_s_FINANCIAL_PRODUCTS_PATH = r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\FINANCIAL PRODUCTS.csv'
-gc_s_PREDICTION_ERROR_MAPE =  r'C:\Users\yunus\Documents\My Project\data\Input\5 hr\PREDICTION ERROR MAPE.csv'
-
-
 class PortfolioManagement():
         
     def __init__(self, dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, decMaximumRiskMape, dfPredictionErrorMape):
