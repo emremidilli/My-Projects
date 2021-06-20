@@ -146,6 +146,13 @@ def dfGetDimensionSize(dfTimeSteps):
     return iFeatureSize, iWindowLength
 
 
+def dfGetModels():
+    sSql = "SELECT top 5 * FROM VW_MODELS order BY SHORT_DESCRIPTION desc"
+    dfModels = execute_sql(sSql, "")
+
+    return dfModels
+
+
 def main(iModelId, sFromTimeStamp = "DEFAULT", sToTimeStamp = "DEFAULT" ):
     dfInput, dfTimeStepsInput= dfGetFeatureValues(iModelId, "1", sFromTimeStamp , sToTimeStamp)
     dfTarget, dfTimeStepsTarget = dfGetFeatureValues(iModelId, "2", sFromTimeStamp, sToTimeStamp)
