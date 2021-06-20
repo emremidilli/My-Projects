@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 24 06:20:42 2020
-
-@author: Yunus Emre Midilli
-"""
-
 import Neural_Attention_Mechanism
 import Multi_Layer_Perceptron
 import pandas as pd
@@ -21,16 +14,19 @@ import shutil
 gc_dec_TRAINING_RATIO = 0.7
 gc_dec_TEST_RATIO = round(1 - gc_dec_TRAINING_RATIO,2)
 gc_s_SCALERS_PATH = './__scalers__/'
-gc_dt_FROM_DATE = "DEFAULT"
-gc_dt_TO_DATE = "DEFAULT"
+gc_dt_FROM_DATE = '2019-01-01 00:00:00.000'
+gc_dt_TO_DATE = '2021-03-19 23:00:00.000'
+
+
+
 
 
 
 def main():
-    sql ="SELECT * FROM VW_MODELS --WHERE LATEST_STATUS_ID = 2"
     
-    df_models = execute_sql(sql)
-    for i_index, i_row in df_models.iterrows():
+    dfModels = Preprocess.dfGetModels()
+
+    for i_index, i_row in dfModels.iterrows():
         model_id = str(i_row["ID"])
         
         execute_sql("EXEC SP_UPDATE_MODEL_STATUS '"+model_id+"', 3, 1")
