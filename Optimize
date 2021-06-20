@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Nov 28 23:06:26 2020
-
-@author: yunus
-"""
-
-
 import operator
 from deap import creator
 from deap import tools
