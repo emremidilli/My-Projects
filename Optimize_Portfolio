@@ -768,26 +768,3 @@ class ResultLogs():
         sValues = sValues + ';' + ';'.join(str(x) for x in aFitnessValues)
         
         oOutputFile.write('\n' + sValues)
-
-
-def dfGetInputs():
-
-    decInitialBalance = 150
-    
-    decMaximumRiskMape = 0.15
-    
-    dfExpectedPricesClose = pd.read_csv(gc_s_EXPECTED_PRICES_CLOSE_PATH, index_col=0)
-    
-    dfExpectedPricesOpen = pd.read_csv(gc_s_EXPECTED_PRICES_OPEN_PATH, index_col=0)
-    
-    dfExpectedSpread = pd.read_csv(gc_s_EXPECTED_SPREAD_PATH, index_col=0)
-    
-    dfForwardTimeSteps = pd.DataFrame(dfExpectedPricesClose.columns,index = None, columns = ['TIME_STEP'])
-        
-    dfFinancialProducts = pd.read_csv(gc_s_FINANCIAL_PRODUCTS_PATH)
-    
-    dfPredictionErrorMape = pd.read_csv(gc_s_PREDICTION_ERROR_MAPE, index_col=0)
-    
-    
-    return dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, decMaximumRiskMape, dfPredictionErrorMape
-
