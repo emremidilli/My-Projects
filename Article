@@ -332,9 +332,7 @@ for dtSimulationModelTimeStamp, _ in dfSimulationModelInput.iterrows():
                 )
             
             
-            
-    
-        
+
         oPortfolioOptimizerExpected = PortfolioManagement(
             dfExpectedPricesClose ,
             dfExpectedPricesOpen, 
@@ -344,10 +342,7 @@ for dtSimulationModelTimeStamp, _ in dfSimulationModelInput.iterrows():
             decBalance, 
             gc_dec_MAX_RISK_RMSE, 
             dfPredictionErrorRmse)
-        aOptimumAmounts, aOptiumumPositions = oPortfolioOptimizerExpected.Main()
-        decExpectedProfit = oPortfolioOptimizerExpected.decEvaluateFitness(aOptimumAmounts, aOptiumumPositions)
-        
-        
+
         
         oPortfolioOptimizerActual = PortfolioManagement(
             dfActualPricesClose ,
@@ -358,6 +353,10 @@ for dtSimulationModelTimeStamp, _ in dfSimulationModelInput.iterrows():
             decBalance, 
             gc_dec_MAX_RISK_RMSE, 
             dfPredictionErrorRmse)
+        
+        
+        aOptimumAmounts, aOptiumumPositions = oPortfolioOptimizerExpected.Main()
+        decExpectedProfit = oPortfolioOptimizerExpected.decEvaluateFitness(aOptimumAmounts, aOptiumumPositions)
         decActualProfit = oPortfolioOptimizerActual.decEvaluateFitness(aOptimumAmounts, aOptiumumPositions)
         
         
