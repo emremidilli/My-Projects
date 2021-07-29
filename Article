@@ -1,0 +1,257 @@
+import pandas as pd
+from datetime import datetime
+import MetaTrader5 as mt5
+import pytz
+import sys
+import pickle
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+
+
+
+sys.path.append(r'C:\Users\yunus\Documents\My Project')
+import Multi_Layer_Perceptron
+from Optimize_Portfolio import PortfolioManagement
+
+
+
+gc_o_TIME_ZONE = pytz.timezone("Etc/UTC")
+gc_dt_FROM = datetime(2019, 1, 1, tzinfo=gc_o_TIME_ZONE)
+gc_dt_TO = datetime(2021, 2, 1, tzinfo=gc_o_TIME_ZONE)
+gc_dt_SIMULATION_MODEL_FROM = "2021-01-01 00:00:00"
+
+
+gc_a_SYMBOLS = ['BTCUSD', 'ETHUSD', 'LTCUSD','XRPUSD']
+
+gc_a_INPUT_FEATURES = ['open', 'high', 'low', 'close', 'tick_volume', 'spread']
+gc_a_OUTPUT_FEATURES = ['close', 'spread']
+
+gc_i_BACKWARD_TIME_WINDOW = -4
+gc_i_FORWARD_TIME_WINDOW = 4
+
+gc_dec_TRAINING_RATIO = 0.7
+gc_dec_TEST_RATIO = round(1 - gc_dec_TRAINING_RATIO,2)
+gc_s_SCALERS_PATH = './__scalers__/'
+gc_dec_MAX_RISK_MAPE = 0.10
+gc_dec_INITIAL_BALANCE = 1000
+
+
+
+
+
+
+def ConvertSpreadValues(dfRates, aSymbolInfo):
+    iDigits = aSymbolInfo.digits
+    dfRates['spread'] = dfRates['spread'] * pow(10, -iDigits)
+    
+    
+def dfShiftTimeSteps(dfRates, aTimeSteps, aFeatures):
+    
+    dicColumnIndices = pd.MultiIndex.from_product([aTimeSteps, aFeatures], names=["time step", "feature"])
+    
+    dfShiftedRates = pd.DataFrame(columns=dicColumnIndices, index =dfRates.index )
+    
+    for i in aTimeSteps:
+        dfShiftedRates[i] = dfRates.shift(-i)
+
+    dfShiftedRates.dropna(inplace=True)
+
+    return dfShiftedRates
+        
+
+
+
+def dfGetMarketData(sSymbol):
+    
+    if not mt5.initialize():
+        print("initialize() failed, error code =",mt5.last_error())
+        sys.exit()
+        
+        
+    aSymbolInfo = mt5.symbol_info(sSymbol)
+    if not aSymbolInfo:
+        print("symbol_info() failed, error code =",mt5.last_error())
+        sys.exit()
+    
+    
+    aRates = mt5.copy_rates_range(sSymbol, mt5.TIMEFRAME_H1, gc_dt_FROM, gc_dt_TO)
+    if len(aRates) == 0:
+        print("copy_rates_range() failed, error code =",mt5.last_error())
+        sys.exit()
+        
+        
+    mt5.shutdown()
+    
+    dfRates = pd.DataFrame(aRates)
+    
+    dfRates['time']=pd.to_datetime(dfRates['time'], unit='s')
+    dfRates.set_index('time', inplace=True)
+    dfRates.drop('real_volume', axis = 1, inplace=True)
+
+
+    ConvertSpreadValues(dfRates, aSymbolInfo)
+    
+    return dfRates
+
+
+def dfPredict(sSymbol,oPredictiveModel,dfInput, dtOutputIndices, dfOutputColumns):
+    
+    sScalerFilePathInput = gc_s_SCALERS_PATH +  sSymbol + ' input.sav'
+    sScalerFilePathOutput = gc_s_SCALERS_PATH +  sSymbol + ' target.sav'
+    
+    oScalerInput = pickle.load(open(sScalerFilePathInput, 'rb'))
+    oScalerOutput = pickle.load(open(sScalerFilePathOutput, 'rb'))
+    
+    oScalerInput.partial_fit(dfInput)
+    
+    dfInputScaled = oScalerInput.transform(dfInput)
+            
+    aScaledPrediction = oPredictiveModel.aPredict(dfInputScaled)
+    
+        
+    aPrediction= oScalerOutput.inverse_transform(aScaledPrediction)
+    dfPrediction = pd.DataFrame(aPrediction, index = dtOutputIndices, columns = dfOutputColumns )
+    
+    pickle.dump(oScalerInput, open(sScalerFilePathInput, 'wb'))
+    pickle.dump(oScalerOutput, open(sScalerFilePathOutput, 'wb'))
+    
+    
+    return dfPrediction
+    
+
+
+
+def main():
+    
+    dfMse = pd.DataFrame()
+    dfMae = pd.DataFrame()
+    dfR2 = pd.DataFrame()
+    dfMape = pd.DataFrame()
+    dfExpVar = pd.DataFrame()
+    serModels = pd.Series(dtype=object)
+    
+    aBackwardTimeSteps = range(gc_i_BACKWARD_TIME_WINDOW, 0)
+    aForwardTimeSteps = range(0, gc_i_FORWARD_TIME_WINDOW)
+    
+    
+    dfSimulationModelInput = pd.DataFrame()
+    dfSimulationModelOutput = pd.DataFrame()
+    
+    for sSymbol in gc_a_SYMBOLS:
+        
+        dfRates = dfGetMarketData(sSymbol)
+        
+        dfInput = dfShiftTimeSteps(dfRates, aBackwardTimeSteps, gc_a_INPUT_FEATURES)
+        dfOutput = dfShiftTimeSteps(dfRates, aForwardTimeSteps, gc_a_OUTPUT_FEATURES)
+        dfMerged =pd.merge(dfInput, dfOutput, left_index=True, right_index=True)
+        
+        
+        dfPredictiveModelInput = dfMerged[dfInput.columns][:gc_dt_SIMULATION_MODEL_FROM]
+        dfPredictiveModelOutput= dfMerged[dfOutput.columns][:gc_dt_SIMULATION_MODEL_FROM]
+        
+        dfTempSimulationInput = pd.DataFrame(
+            data = dfMerged[dfInput.columns][gc_dt_SIMULATION_MODEL_FROM:].values,
+            columns = pd.MultiIndex.from_product([[sSymbol],aBackwardTimeSteps, gc_a_INPUT_FEATURES], names=["symbol", "time step", "feature"]),
+            index = dfMerged[dfInput.columns][gc_dt_SIMULATION_MODEL_FROM:].index
+            )
+        
+        dfTempSimulationOutput = pd.DataFrame(
+            data = dfMerged[dfOutput.columns][gc_dt_SIMULATION_MODEL_FROM:].values,
+            columns = pd.MultiIndex.from_product([[sSymbol],aForwardTimeSteps, gc_a_OUTPUT_FEATURES], names=["symbol", "time step", "feature"]),
+            index = dfMerged[dfOutput.columns][gc_dt_SIMULATION_MODEL_FROM:].index
+            )
+        
+        if len(dfSimulationModelInput) == 0:
+            dfSimulationModelInput = dfTempSimulationInput
+            dfSimulationModelOutput = dfTempSimulationOutput
+        else:
+            dfSimulationModelInput = dfSimulationModelInput.join(dfTempSimulationInput)
+            dfSimulationModelOutput = dfSimulationModelOutput.join(dfTempSimulationOutput)
+            
+        
+        dfInputTrain, dfInputTest, dfOutputTrain, dfOutputTest = train_test_split(dfPredictiveModelInput, dfPredictiveModelOutput, test_size=gc_dec_TEST_RATIO, shuffle=False)
+        
+        oScalerInput = MinMaxScaler()
+        oScalerOutput = MinMaxScaler()
+        
+        aScaledInputTrain = oScalerInput.fit_transform(dfInputTrain)
+        aScaledOutputTrain = oScalerOutput.fit_transform(dfOutputTrain)
+        
+        oScalerInput.partial_fit(dfInputTest)
+        oScalerOutput.partial_fit(dfOutputTest)
+        
+        aScaledInputTest = oScalerInput.transform(dfInputTest)
+        aScaledOutputTest = oScalerOutput.transform(dfOutputTest)
+        
+        
+        sScalerFilePathInput = gc_s_SCALERS_PATH +  sSymbol + ' input.sav'
+        sScalerFilePathOutput = gc_s_SCALERS_PATH + sSymbol + ' target.sav'
+        
+        pickle.dump(oScalerInput, open(sScalerFilePathInput, 'wb'))
+        pickle.dump(oScalerOutput, open(sScalerFilePathOutput, 'wb'))
+        
+        
+        oPredictiveModel = Multi_Layer_Perceptron.Multi_Layer_Perceptron(sSymbol, len(gc_a_INPUT_FEATURES), len(gc_a_OUTPUT_FEATURES), len(aBackwardTimeSteps) , len(aForwardTimeSteps))
+        oPredictiveModel.train(aScaledInputTrain, aScaledOutputTrain, aScaledInputTest, aScaledOutputTest)
+        
+        
+        dfLosses = pd.DataFrame(oPredictiveModel.history.history)
+        dfLosses.plot()
+        
+        
+       
+        dfPrediction = dfPredict(sSymbol,oPredictiveModel, aScaledInputTest,dfOutputTest.index, dfOutputTest.columns)
+        
+
+        
+        
+        aMse = metrics.mean_squared_error(dfOutputTest, dfPrediction, multioutput='raw_values')
+        dfMse = dfMse.append(pd.DataFrame(data= aMse, index = dfOutputTest.columns, columns = [sSymbol]).transpose())
+        
+        aMae = metrics.mean_absolute_error(dfOutputTest, dfPrediction, multioutput='raw_values') 
+        dfMae = dfMae.append(pd.DataFrame(data= aMae, index = dfOutputTest.columns, columns = [sSymbol]).transpose())
+        
+        aR2 = metrics.r2_score(dfOutputTest, dfPrediction, multioutput='raw_values')
+        dfR2 = dfR2.append(pd.DataFrame(data= aR2, index = dfOutputTest.columns, columns = [sSymbol]).transpose())
+        
+        aMape = metrics.mean_absolute_percentage_error(dfOutputTest, dfPrediction, multioutput='raw_values')
+        dfMape = dfMape.append(pd.DataFrame(data= aMape, index = dfOutputTest.columns, columns = [sSymbol]).transpose())
+        
+        aExpVar = metrics.explained_variance_score(dfOutputTest, dfPrediction, multioutput='raw_values')
+        dfExpVar = dfExpVar.append(pd.DataFrame(data= aExpVar, index = dfOutputTest.columns, columns = [sSymbol]).transpose())
+        
+        serModels = serModels.append(pd.Series(data = oPredictiveModel, index = [sSymbol]) )
+        
+    
+    
+    
+    dfSimulationModelInput = dfSimulationModelInput[::gc_i_FORWARD_TIME_WINDOW]
+    dfSimulationModelOutput = dfSimulationModelOutput[::gc_i_FORWARD_TIME_WINDOW]
+    
+    
+    for dtSimulationModelTimeStamp, _ in dfSimulationModelInput.iterrows():
+        
+        for sSymbol in gc_a_SYMBOLS:
+            serSimulationModelInput = dfSimulationModelInput[sSymbol][dtSimulationModelTimeStamp:dtSimulationModelTimeStamp]
+            serSimulationModelOutput = dfSimulationModelOutput[sSymbol][dtSimulationModelTimeStamp:dtSimulationModelTimeStamp]
+            
+            oPredictiveModel = serModels[sSymbol]
+            dfSimulationPrediction = dfPredict(sSymbol,oPredictiveModel, serSimulationModelInput,serSimulationModelOutput.index, serSimulationModelOutput.columns)
+            
+            
+        
+    
+main() 
+
+
+# dfExpectedPricesClose =    
+# dfExpectedPricesOpen =
+# dfExpectedSpread =  
+# dfFinancialProducts = 
+# dfForwardTimeSteps =
+# decBalance = 
+# gc_dec_MAX_RISK_MAPE = 
+# dfPredictionErrorMape = 
+# oPortfolioManagerExpected = PortfolioManagement(dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decBalance, gc_dec_MAX_RISK_MAPE, dfPredictionErrorMape)
+# aOptimumAmounts, aOptiumumPositions = oPortfolioManagerExpected.Main()
