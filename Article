@@ -16,13 +16,14 @@ from Optimize_Portfolio import PortfolioManagement
 
 gc_o_TIME_ZONE = pytz.timezone("Etc/UTC")
 gc_dt_FROM = datetime(2019, 1, 1, tzinfo=gc_o_TIME_ZONE)
-gc_dt_TO = datetime(2021, 2, 1, tzinfo=gc_o_TIME_ZONE)
+gc_dt_TO = datetime(2021, 1, 5, tzinfo=gc_o_TIME_ZONE)
 gc_dt_SIMULATION_MODEL_FROM = "2021-01-01 00:00:00"
 
 
-gc_a_SYMBOLS = ['BTCUSD', 'ETHUSD', 'LTCUSD','XRPUSD']
-
+gc_a_SYMBOLS = ['ETHUSD', 'LTCUSD','XRPUSD', 'BTCUSD']
+gc_a_SEASONAL_FEATURES = ["year","month", "day", "dayofweek", "hour"]
 gc_a_INPUT_FEATURES = ['open', 'high', 'low', 'close', 'tick_volume', 'spread']
+gc_a_INPUT_FEATURES = gc_a_INPUT_FEATURES + gc_a_SEASONAL_FEATURES
 gc_a_OUTPUT_FEATURES = ['open', 'close', 'spread']
 gc_a_METRICS = ["mse", "rmse", "mae", "r2", "mape"]
 
@@ -33,11 +34,8 @@ gc_i_FORWARD_TIME_WINDOW = 4
 gc_dec_TRAINING_RATIO = 0.7
 gc_dec_TEST_RATIO = round(1 - gc_dec_TRAINING_RATIO,2)
 gc_s_SCALERS_PATH = './__scalers__/'
-gc_dec_MAX_RISK_RMSE = 1
+gc_dec_MAX_RISK_RMSE = 0.05
 gc_dec_INITIAL_BALANCE = 1000
-
-
-
 
 
 
@@ -59,8 +57,6 @@ def dfShiftTimeSteps(dfRates, aTimeSteps, aFeatures):
 
     return dfShiftedRates
         
-
-
 
 def dfGetMarketData(sSymbol):
     
@@ -91,8 +87,17 @@ def dfGetMarketData(sSymbol):
 
 
     ConvertSpreadValues(dfRates, aSymbolInfo)
+    AddSeasonalFeatures(dfRates)
     
     return dfRates
+
+
+def AddSeasonalFeatures(dfRates):
+    
+    for sSeasonalFeature in gc_a_SEASONAL_FEATURES:
+        exec("dfRates[sSeasonalFeature] = dfRates.index." + sSeasonalFeature)
+        
+    
 
 
 def dfPredict(sSymbol,oPredictiveModel,dfInput, dtOutputIndices, dfOutputColumns):
@@ -364,5 +369,3 @@ for dtSimulationModelTimeStamp, _ in dfSimulationModelInput.iterrows():
         
         dfExpectedProfit = dfExpectedProfit.append(pd.DataFrame([decExpectedProfit], index = [dtSimulationModelTimeStamp]))
         dfActualProfit = dfActualProfit.append(pd.DataFrame([decActualProfit], index = [dtSimulationModelTimeStamp] ))
-    
-    
