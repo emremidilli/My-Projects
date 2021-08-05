@@ -9,13 +9,14 @@ from sklearn.model_selection import train_test_split
 from sklearn import metrics
 
 sys.path.append(r'C:\Users\yunus\Documents\My Project')
-import Multi_Layer_Perceptron
+import Long_Short_Term_Memory
 from Optimize_Portfolio import PortfolioManagement
+# import Neural_Attention_Mechanism
 
 
 
 gc_o_TIME_ZONE = pytz.timezone("Etc/UTC")
-gc_dt_FROM = datetime(2019, 1, 1, tzinfo=gc_o_TIME_ZONE)
+gc_dt_FROM = datetime(2020, 1, 1, tzinfo=gc_o_TIME_ZONE)
 gc_dt_TO = datetime(2021, 1, 5, tzinfo=gc_o_TIME_ZONE)
 gc_dt_SIMULATION_MODEL_FROM = "2021-01-01 00:00:00"
 
@@ -31,10 +32,14 @@ gc_a_METRICS = ["mse", "rmse", "mae", "r2", "mape"]
 gc_i_BACKWARD_TIME_WINDOW = -4
 gc_i_FORWARD_TIME_WINDOW = 4
 
-gc_dec_TRAINING_RATIO = 0.7
-gc_dec_TEST_RATIO = round(1 - gc_dec_TRAINING_RATIO,2)
+gc_dec_TRAINING_RATIO = 0.6
+gc_dec_VALIDATION_RATIO = 0.2
+
+gc_dec_TEST_RATIO = round(1 - (gc_dec_TRAINING_RATIO+ gc_dec_VALIDATION_RATIO),2)
+
+
 gc_s_SCALERS_PATH = './__scalers__/'
-gc_dec_MAX_RISK_RMSE = 0.05
+gc_dec_MAX_RISK_RMSE = 0.15
 gc_dec_INITIAL_BALANCE = 1000
 
 
@@ -140,7 +145,6 @@ def dfGetMetrics(dfActual, dfPrediction):
 
     dfMetrics.loc["rmse"] = metrics.mean_squared_error(dfActual, dfPrediction, multioutput='raw_values', squared=False)
       
-     
     return dfMetrics
 
 
@@ -188,11 +192,20 @@ for sSymbol in gc_a_SYMBOLS:
         dfSimulationModelOutput = dfSimulationModelOutput.join(dfTempSimulationOutput)
         
     
-    dfInputTrain, dfInputTest, dfOutputTrain, dfOutputTest = train_test_split(
+    dfInputTrainValidation, dfInputTest, dfOutputTrainValidation, dfOutputTest = train_test_split(
         dfPredictiveModelInput, 
         dfPredictiveModelOutput, 
         test_size=gc_dec_TEST_RATIO, 
         shuffle=False)
+    
+    
+    dfInputTrain, dfInputValidation, dfOutputTrain, dfOutputValidation = train_test_split(
+        dfInputTrainValidation, 
+        dfOutputTrainValidation, 
+        test_size=gc_dec_VALIDATION_RATIO * gc_dec_TEST_RATIO, 
+        shuffle=False)    
+    
+    
     
     oScalerInput = MinMaxScaler()
     oScalerOutput = MinMaxScaler()
@@ -200,12 +213,16 @@ for sSymbol in gc_a_SYMBOLS:
     aScaledInputTrain = oScalerInput.fit_transform(dfInputTrain)
     aScaledOutputTrain = oScalerOutput.fit_transform(dfOutputTrain)
     
+    oScalerInput.partial_fit(dfInputValidation)
+    oScalerOutput.partial_fit(dfOutputValidation)
+    aScaledInputValidation = oScalerInput.transform(dfInputValidation)
+    aScaledOutputValidation = oScalerOutput.transform(dfOutputValidation)    
+    
+    
     oScalerInput.partial_fit(dfInputTest)
     oScalerOutput.partial_fit(dfOutputTest)
-    
     aScaledInputTest = oScalerInput.transform(dfInputTest)
     aScaledOutputTest = oScalerOutput.transform(dfOutputTest)
-    
     
     sScalerFilePathInput = gc_s_SCALERS_PATH +  sSymbol + ' input.sav'
     sScalerFilePathOutput = gc_s_SCALERS_PATH + sSymbol + ' target.sav'
@@ -214,8 +231,9 @@ for sSymbol in gc_a_SYMBOLS:
     pickle.dump(oScalerOutput, open(sScalerFilePathOutput, 'wb'))
     
     
-    oPredictiveModel = Multi_Layer_Perceptron.Multi_Layer_Perceptron(sSymbol, len(gc_a_INPUT_FEATURES), len(gc_a_OUTPUT_FEATURES), len(aBackwardTimeSteps) , len(aForwardTimeSteps))
-    oPredictiveModel.train(aScaledInputTrain, aScaledOutputTrain, aScaledInputTest, aScaledOutputTest)
+    oPredictiveModel = Long_Short_Term_Memory.Long_Short_Term_Memory(sSymbol, len(gc_a_INPUT_FEATURES), len(gc_a_OUTPUT_FEATURES), len(aBackwardTimeSteps) , len(aForwardTimeSteps))
+    oPredictiveModel.train(aScaledInputTrain, aScaledOutputTrain, aScaledInputValidation, aScaledOutputValidation)
+
     
     
     dfLosses = pd.DataFrame(oPredictiveModel.history.history)
@@ -225,7 +243,6 @@ for sSymbol in gc_a_SYMBOLS:
    
     dfPrediction, dfScaledPrediction = dfPredict(sSymbol,oPredictiveModel, dfInputTest,dfOutputTest.index, dfOutputTest.columns)
 
-    
 
     dfUnscaledMetrics = dfUnscaledMetrics.append(
         pd.DataFrame(
@@ -341,7 +358,7 @@ for dtSimulationModelTimeStamp, _ in dfSimulationModelInput.iterrows():
         oPortfolioOptimizerExpected = PortfolioManagement(
             dfExpectedPricesClose ,
             dfExpectedPricesOpen, 
-            dfExpectedSpread, 
+            dfActualSpread, 
             pd.DataFrame(gc_a_SYMBOLS) , 
             pd.DataFrame(aForwardTimeSteps, columns = ["TIME_STEP"]), 
             decBalance, 
