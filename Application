@@ -7,8 +7,6 @@ import pickle
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
-
-sys.path.append(r'C:\Users\yunus\Documents\My Project')
 from Optimize_Portfolio import PortfolioManagement
 import Long_Short_Term_Memory
 
@@ -107,8 +105,25 @@ def AddSeasonalFeatures(dfRates):
 
 def AddReturns(dfRates):
     dfRates["return"] = (dfRates["open"] - dfRates["close"])/dfRates["open"]
-    dfRates["return"] = dfRates["return"].abs()
     
+
+    
+    
+
+def aAddClassLabels(dfToClassify, sFeatureToClassify):
+    gc_i_PERIODS_OF_CLASSES = 10
+
+    aUniqueLabels = pd.interval_range(start=-1, periods = gc_i_PERIODS_OF_CLASSES, end=1)
+    
+    dfToClassify["__LABEL__"] = pd.cut(dfToClassify[sFeatureToClassify], bins = aUniqueLabels, labels = False)
+    
+    return aUniqueLabels
+    
+    
+    
+
+
+
 
 def dfPredict(sSymbol, oPredictiveModel, dfInput, dtOutputIndices, dfOutputColumns):
 
@@ -161,7 +176,7 @@ def dfGetMetrics(dfActual, dfPrediction):
 
 
 
-def dfPredictWithRegressionModel():
+def dfTrainWithRegressionModel():
     dfUnscaledMetrics = pd.DataFrame()
     dfScaledMetrics = pd.DataFrame()
     serModels = pd.Series(dtype=object)
@@ -393,4 +408,4 @@ def dfSimulate(dfSimulationModelInput, dfSimulationModelOutput, serModels, dfPre
             dfActualProfit = dfActualProfit.append(pd.DataFrame([decActualProfit], index = [dtSimulationModelTimeStamp] ))
 
 
-dfSimulationModelInput, dfSimulationModelOutput, serModels, dfPredictionErrorRmse, dfUnscaledMetrics, dfScaledMetrics = dfPredictWithRegressionModel()
+
