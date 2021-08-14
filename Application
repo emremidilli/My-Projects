@@ -8,7 +8,8 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from Optimize_Portfolio import PortfolioManagement
-import Long_Short_Term_Memory
+from Long_Short_Term_Memory import Long_Short_Term_Memory
+from Neural_Attention_Mechanism import Neural_Attention_Mechanism
 
 
 gc_o_TIME_ZONE = pytz.timezone("Etc/UTC")
@@ -22,7 +23,6 @@ gc_a_SYMBOLS = ['WTI','BRENT', 'NAT.GAS'] #['ETHUSD', 'LTCUSD', 'XRPUSD', 'BTCUS
 gc_a_SEASONAL_FEATURES = ["year", "month", "day", "dayofweek", "hour"]
 gc_a_INPUT_FEATURES = ['open', 'high', 'low', 'close', 'tick_volume', 'spread']
 gc_a_INPUT_FEATURES = gc_a_INPUT_FEATURES + gc_a_SEASONAL_FEATURES
-gc_a_OUTPUT_FEATURES = ['open', 'close', 'spread']
 gc_a_METRICS = ["mse", "rmse", "mae", "r2", "mape"]
 
 
@@ -42,6 +42,8 @@ gc_dec_INITIAL_BALANCE = 1000
 
 g_aBackwardTimeSteps = range(gc_i_BACKWARD_TIME_WINDOW, 0)
 g_aForwardTimeSteps = range(0, gc_i_FORWARD_TIME_WINDOW)
+
+gc_i_PERIODS_OF_CLASSES = 10
 
 
 def ConvertSpreadValues(dfRates, aSymbolInfo):
@@ -107,22 +109,13 @@ def AddReturns(dfRates):
     dfRates["return"] = (dfRates["open"] - dfRates["close"])/dfRates["open"]
     
 
-    
-    
 
-def aAddClassLabels(dfToClassify, sFeatureToClassify):
-    gc_i_PERIODS_OF_CLASSES = 10
-
-    aUniqueLabels = pd.interval_range(start=-1, periods = gc_i_PERIODS_OF_CLASSES, end=1)
+def AddReturnClassLabels(dfToClassify, aClassLabels):
+    dfLabels = pd.cut(dfToClassify["return"], bins = aClassLabels, labels = False)
     
-    dfToClassify["__LABEL__"] = pd.cut(dfToClassify[sFeatureToClassify], bins = aUniqueLabels, labels = False)
+    dfLabels = pd.get_dummies(dfLabels)
     
-    return aUniqueLabels
-    
-    
-    
-
-
+    dfToClassify[aClassLabels] = dfLabels
 
 
 def dfPredict(sSymbol, oPredictiveModel, dfInput, dtOutputIndices, dfOutputColumns):
@@ -176,7 +169,14 @@ def dfGetMetrics(dfActual, dfPrediction):
 
 
 
-def dfTrainWithRegressionModel():
+def dfTrain(bIsClassification = False):
+    
+    if bIsClassification == False:
+        aOutputFeatures = ['open', 'close', 'spread']
+    else:
+        aOutputFeatures = pd.interval_range(start=-1, periods = gc_i_PERIODS_OF_CLASSES, end=1)
+
+    
     dfUnscaledMetrics = pd.DataFrame()
     dfScaledMetrics = pd.DataFrame()
     serModels = pd.Series(dtype=object)
@@ -188,9 +188,13 @@ def dfTrainWithRegressionModel():
     for sSymbol in gc_a_SYMBOLS:
     
         dfRates = dfGetMarketData(sSymbol)
+        
+        if bIsClassification == True:
+            AddReturnClassLabels(dfRates, aOutputFeatures)
+        
     
         dfInput = dfShiftTimeSteps(dfRates, g_aBackwardTimeSteps, gc_a_INPUT_FEATURES)
-        dfOutput = dfShiftTimeSteps(dfRates, g_aForwardTimeSteps, gc_a_OUTPUT_FEATURES)
+        dfOutput = dfShiftTimeSteps(dfRates, g_aForwardTimeSteps, aOutputFeatures)
         dfMerged = pd.merge(dfInput, dfOutput, left_index=True, right_index=True)
     
         dfPredictiveModelInput = dfMerged[dfInput.columns][:gc_dt_SIMULATION_MODEL_FROM]
@@ -205,7 +209,7 @@ def dfTrainWithRegressionModel():
     
         dfTempSimulationOutput = pd.DataFrame(
             data=dfMerged[dfOutput.columns][gc_dt_SIMULATION_MODEL_FROM:].values,
-            columns=pd.MultiIndex.from_product([[sSymbol], g_aForwardTimeSteps, gc_a_OUTPUT_FEATURES], names=[
+            columns=pd.MultiIndex.from_product([[sSymbol], g_aForwardTimeSteps, aOutputFeatures], names=[
                                                 "symbol", "time step", "feature"]),
             index=dfMerged[dfOutput.columns][gc_dt_SIMULATION_MODEL_FROM:].index
         )
@@ -250,13 +254,26 @@ def dfTrainWithRegressionModel():
     
         pickle.dump(oScalerInput, open(sScalerFilePathInput, 'wb'))
         pickle.dump(oScalerOutput, open(sScalerFilePathOutput, 'wb'))
-    
-        oPredictiveModel = Long_Short_Term_Memory.Long_Short_Term_Memory(
-            sSymbol, 
-            len(gc_a_INPUT_FEATURES), 
-            len(gc_a_OUTPUT_FEATURES), 
-            len(g_aBackwardTimeSteps), 
-            len(g_aForwardTimeSteps))
+        
+        
+        if bIsClassification == False:
+            oPredictiveModel = Long_Short_Term_Memory(
+                sSymbol, 
+                len(gc_a_INPUT_FEATURES), 
+                len(aOutputFeatures), 
+                len(g_aBackwardTimeSteps), 
+                len(g_aForwardTimeSteps)
+                )
+        else:
+            oPredictiveModel = Neural_Attention_Mechanism(sSymbol, 
+                len(gc_a_INPUT_FEATURES), 
+                len(aOutputFeatures), 
+                len(g_aBackwardTimeSteps), 
+                len(g_aForwardTimeSteps)
+                )
+        
+        
+        
         oPredictiveModel.train(aScaledInputTrain, aScaledOutputTrain,aScaledInputValidation, aScaledOutputValidation)
     
     
@@ -292,7 +309,6 @@ def dfTrainWithRegressionModel():
     dfPredictionErrorRmse = dfScaledMetrics.xs('rmse', axis = 0, level = 1, drop_level = True).astype(float)
     dfPredictionErrorRmse = dfPredictionErrorRmse.astype(float).mean(axis = 1, level = "time step")
     
-    
     return dfSimulationModelInput, dfSimulationModelOutput, serModels, dfPredictionErrorRmse, dfUnscaledMetrics, dfScaledMetrics
 
 
@@ -304,7 +320,6 @@ def dfSimulate(dfSimulationModelInput, dfSimulationModelOutput, serModels, dfPre
     dfExpectedProfit = pd.DataFrame()
     dfActualProfit = pd.DataFrame()
     dfBalance = pd.DataFrame()
-    
     
     decBalance = gc_dec_INITIAL_BALANCE
     
@@ -409,3 +424,5 @@ def dfSimulate(dfSimulationModelInput, dfSimulationModelOutput, serModels, dfPre
 
 
 
+
+dfTrain(True)
