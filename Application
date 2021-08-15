@@ -23,7 +23,7 @@ gc_a_SYMBOLS = ['WTI','BRENT', 'NAT.GAS'] #['ETHUSD', 'LTCUSD', 'XRPUSD', 'BTCUS
 gc_a_SEASONAL_FEATURES = ["year", "month", "day", "dayofweek", "hour"]
 gc_a_INPUT_FEATURES = ['open', 'high', 'low', 'close', 'tick_volume', 'spread']
 gc_a_INPUT_FEATURES = gc_a_INPUT_FEATURES + gc_a_SEASONAL_FEATURES
-gc_a_METRICS = ["mse", "rmse", "mae", "r2", "mape"]
+gc_a_METRICS = ["mse", "rmse", "mae", "r2", "mape", "accuracy"]
 
 
 gc_i_BACKWARD_TIME_WINDOW = -4
@@ -163,7 +163,18 @@ def dfGetMetrics(dfActual, dfPrediction):
 
     dfMetrics.loc["rmse"] = metrics.mean_squared_error(
         dfActual, dfPrediction, multioutput='raw_values', squared=False)
-
+    
+    
+    dfColumns = dfActual.columns
+    
+    for i in range(len(dfColumns)):
+        sColumn = dfColumns[i]
+        aActual = dfActual[sColumn]
+        aPredicted = dfPrediction[sColumn]
+        decAccuracy = metrics.accuracy_score(aActual, aPredicted)
+        dfMetrics.loc["accuracy"][sColumn] = decAccuracy
+    
+    
     return dfMetrics
 
 
