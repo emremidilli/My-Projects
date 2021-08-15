@@ -93,7 +93,7 @@ class Decoder(tf.keras.Model):
         
         aOneHotEncoded = tf.one_hot(tf.nn.top_k(x).indices, tf.shape(x)[1])
         aOneHotEncoded = tf.squeeze(aOneHotEncoded, [1])
-                
+        
         return x, state, attention_weights, aOneHotEncoded
 
 
@@ -266,5 +266,5 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             
             aPredictions = p2
         
-
+        aPredictions = aPredictions.numpy()
         return aPredictions
