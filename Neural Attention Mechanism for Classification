@@ -18,7 +18,7 @@ class Encoder(tf.keras.Model):
                                         dropout = dropout_rate , 
                                         recurrent_dropout= recurrent_dropout_rate)
 
-    def call(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (backward_window_length, backward_feature_size) 
+    def call(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (iBackwardTimeWindow, backward_feature_size) 
       output, state = self.gru(x, initial_state = hidden)
       return output, state
 
@@ -53,6 +53,8 @@ class BahdanauAttention(tf.keras.layers.Layer):
         # context_vector shape after sum == (batch_size, hidden_size) (64, 1024)
         context_vector = attention_weights * values
         context_vector = tf.reduce_sum(context_vector, axis=1)
+        
+        
     
         return context_vector, attention_weights
 
@@ -68,7 +70,7 @@ class Decoder(tf.keras.Model):
                                         return_state=True,
                                         recurrent_initializer='glorot_uniform',activation = activation_function,dropout = dropout_rate , recurrent_dropout= recurrent_dropout_rate)
         
-        self.fc = tf.keras.layers.Dense(one_hot_size)
+        self.fc = tf.keras.layers.Dense(one_hot_size, activation = 'softmax')
     
         self.attention = BahdanauAttention(self.dec_units)
     
@@ -87,8 +89,12 @@ class Decoder(tf.keras.Model):
     
         # output shape == (batch_size, vocab)
         x = self.fc(output)
-    
-        return x, state, attention_weights
+        
+        
+        aOneHotEncoded = tf.one_hot(tf.nn.top_k(x).indices, tf.shape(x)[1])
+        aOneHotEncoded = tf.squeeze(aOneHotEncoded, [1])
+                
+        return x, state, attention_weights, aOneHotEncoded
 
 
 class Neural_Attention_Mechanism(tf.keras.Model):
@@ -100,19 +106,19 @@ class Neural_Attention_Mechanism(tf.keras.Model):
 
         self.feature_size_input = iFeatureSizeX
         self.feature_size_target = iFeatureSizeY
-        self.backward_window_length = iWindowLengthX
-        self.forward_window_length = iWindowLengthY
+        self.iBackwardTimeWindow = iWindowLengthX
+        self.iForwardTimeWindow = iWindowLengthY
         
         self.set_hyperparameters()
         
     
-    def set_hyperparameters(self,epoch_size = 10, batch_size = 128, number_of_hidden_neuron = None, dropout_rate_encoder = 0,dropout_rate_decoder=0, recurrent_dropout_rate_encoder = 0, recurrent_dropout_rate_decoder=0, learning_rate = 0.001, momentum_rate=0.9):
+    def set_hyperparameters(self,epoch_size = 100, batch_size = 128, iNumberOfHiddenNeurons = None, dropout_rate_encoder = 0,dropout_rate_decoder=0, recurrent_dropout_rate_encoder = 0, recurrent_dropout_rate_decoder=0, learning_rate = 0.001, momentum_rate=0.9):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
-        if number_of_hidden_neuron is None:
-            number_of_hidden_neuron = self.feature_size_input*self.backward_window_length*2
+        if iNumberOfHiddenNeurons is None:
+            iNumberOfHiddenNeurons = self.feature_size_input*self.iBackwardTimeWindow*2
             
-        self.number_of_hidden_neuron = number_of_hidden_neuron
+        self.iNumberOfHiddenNeurons = iNumberOfHiddenNeurons
         self.dropout_rate_encoder = dropout_rate_encoder
         self.dropout_rate_decoder = dropout_rate_decoder
         self.recurrent_dropout_rate_encoder = recurrent_dropout_rate_encoder
@@ -124,8 +130,8 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.loss_function = tf.keras.losses.BinaryCrossentropy()
         self.activation_function = 'tanh'
         
-        self.encoder = Encoder(self.feature_size_input, self.number_of_hidden_neuron, self.batch_size,self.activation_function, self.dropout_rate_encoder, self.recurrent_dropout_rate_encoder)
-        self.decoder = Decoder(self.feature_size_target, self.number_of_hidden_neuron, self.batch_size, self.activation_function, self.dropout_rate_decoder, self.recurrent_dropout_rate_decoder)
+        self.encoder = Encoder(self.feature_size_input, self.iNumberOfHiddenNeurons, self.batch_size,self.activation_function, self.dropout_rate_encoder, self.recurrent_dropout_rate_encoder)
+        self.decoder = Decoder(self.feature_size_target, self.iNumberOfHiddenNeurons, self.batch_size, self.activation_function, self.dropout_rate_decoder, self.recurrent_dropout_rate_decoder)
     
     
     @tf.function
@@ -140,7 +146,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             # Teacher forcing - feeding the target as the next input
             for t in range(1, targ.shape[1]):
                 # passing enc_output to the decoder
-                predictions, dec_hidden, _ = self.decoder(dec_input, dec_hidden, enc_output)  
+                predictions, dec_hidden, _, _ = self.decoder(dec_input, dec_hidden, enc_output)  
                             
                 loss += self.loss_function(targ[:, t], predictions)
                 # using teacher forcing
@@ -173,11 +179,11 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             decTraningLoss = 0.0
                     
             for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):
-                inp = tf.reshape(inp, (self.batch_size, self.backward_window_length, self.feature_size_input, 1))
-                targ = tf.reshape(targ, (self.batch_size, self.forward_window_length, self.feature_size_target, 1 )) #since forward window length includes also t.
+                inp = tf.reshape(inp, (self.batch_size, self.iBackwardTimeWindow, self.feature_size_input, 1))
+                targ = tf.reshape(targ, (self.batch_size, self.iForwardTimeWindow, self.feature_size_target, 1 )) #since forward window length includes also t.
                 
-                inp = tf.reshape(inp, (self.batch_size, self.backward_window_length, self.feature_size_input))
-                targ = tf.reshape(targ, (self.batch_size, self.forward_window_length,self.feature_size_target))
+                inp = tf.reshape(inp, (self.batch_size, self.iBackwardTimeWindow, self.feature_size_input))
+                targ = tf.reshape(targ, (self.batch_size, self.iForwardTimeWindow,self.feature_size_target))
                 
                 batch_loss = self.train_step(inp, targ, encoder_hidden)
                 
@@ -191,10 +197,10 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             self.save_weights(self.model_directory)
             
     
-            aPredictionsValidation = self.aPredict(aScaledInputValidation)
+            aPredictionsValidation = self.aPredict(aScaledInputValidation, False)
                
             decValidationLoss = 0.0
-            for t in range(0, self.forward_window_length):
+            for t in range(0, self.iForwardTimeWindow):
                 aPredictionTimeStep = aPredictionsValidation[0:1, t*self.feature_size_target:(t+1)*self.feature_size_target]
                 aActualTimeStep = aScaledOutputValidation[0:1, t*self.feature_size_target:(t+1)*self.feature_size_target]
                 decValidationLoss += self.loss_function(aActualTimeStep, aPredictionTimeStep)
@@ -204,8 +210,8 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             decTraningLoss = decTraningLoss/(aScaledOutputTrain.shape[0])
             decValidationLoss = decValidationLoss/(aScaledOutputValidation.shape[0])
             
-            decValidationLoss = decValidationLoss/self.forward_window_length
-            decTraningLoss = decTraningLoss/self.forward_window_length
+            decValidationLoss = decValidationLoss/self.iForwardTimeWindow
+            decTraningLoss = decTraningLoss/self.iForwardTimeWindow
             
             decTraningLoss = decTraningLoss.numpy()
             decValidationLoss = decValidationLoss.numpy()
@@ -220,39 +226,45 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.save_weights(self.model_directory)
         
     
-    def aPredict(self, input_tensor_test):
+    
+    def aPredict(self, aInput, bReturnOneHot = True ) :
         self.load_weights(self.model_directory)
         
-        batch_size_test = len(input_tensor_test)
+        iBatchSize = len(aInput)
         
-        dataset_test = (tf.data.Dataset.from_tensor_slices((input_tensor_test)))
+        dataset_test = (tf.data.Dataset.from_tensor_slices((aInput)))
         
-        dataset_test = dataset_test.batch(batch_size_test, drop_remainder=True)
+        dataset_test = dataset_test.batch(iBatchSize, drop_remainder=True)
         
-        encoder_hidden = tf.zeros((batch_size_test, self.number_of_hidden_neuron))
+        encoder_hidden = tf.zeros((iBatchSize, self.iNumberOfHiddenNeurons))
     
-        predictions = tf.zeros(1)
+        aPredictions = tf.zeros(1)
         for (batch, (inp_test)) in enumerate(dataset_test.take(-1)):
-            inp_test = tf.reshape(inp_test, (batch_size_test, self.backward_window_length, self.feature_size_input, 1))
-            inp_test = tf.reshape(inp_test, (batch_size_test, self.backward_window_length, self.feature_size_input))
+            inp_test = tf.reshape(inp_test, (iBatchSize, self.iBackwardTimeWindow, self.feature_size_input, 1))
+            inp_test = tf.reshape(inp_test, (iBatchSize, self.iBackwardTimeWindow, self.feature_size_input))
     
             encoder_output, encoder_hidden = self.encoder(inp_test, encoder_hidden)
             
             decoder_hidden = encoder_hidden
             
-            decoder_input = tf.expand_dims(np.zeros((batch_size_test,self.feature_size_target)) , 1)
+            decoder_input = tf.expand_dims(np.zeros((iBatchSize,self.feature_size_target)) , 1)
             
             p2 = tf.zeros(1)
-            for t in range(0, self.forward_window_length):
-                pred, dec_hidden, _ = self.decoder(decoder_input, decoder_hidden, encoder_output) # passing enc_output to the decoder
+            for t in range(0, self.iForwardTimeWindow):
+                pred, dec_hidden, _, aPredOneHot = self.decoder(decoder_input, decoder_hidden, encoder_output) # passing enc_output to the decoder
                 
-                decoder_input = tf.expand_dims(pred, 1)
+                decoder_input = tf.expand_dims(aPredOneHot, 1)
+                
+                if bReturnOneHot == True:
+                    pred = aPredOneHot
+                    
                 if t == 0:
                     p2 = pred
                 else:
                     p2 = tf.concat([p2, pred],1)
+
             
-            predictions = p2
+            aPredictions = p2
         
 
-        return predictions
+        return aPredictions
