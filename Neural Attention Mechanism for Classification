@@ -217,11 +217,11 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             
             
             
-            decTraningLoss = decTraningLoss/(aScaledOutputTrain.shape[0])
+            decTraningLoss = decTraningLoss/(batch+1)
             decValidationLoss = decValidationLoss/(aScaledOutputValidation.shape[0])
             
             decValidationLoss = decValidationLoss/self.iForwardTimeWindow
-            decTraningLoss = decTraningLoss/self.iForwardTimeWindow
+
             
             decTraningLoss = decTraningLoss.numpy()
             decValidationLoss = decValidationLoss.numpy()
