@@ -120,7 +120,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.set_hyperparameters()
         
     
-    def set_hyperparameters(self,epoch_size = 100, batch_size = 128, iNumberOfHiddenNeurons = None, dropout_rate_encoder = 0.2,dropout_rate_decoder=0.2, recurrent_dropout_rate_encoder = 0.2, recurrent_dropout_rate_decoder=0.2, learning_rate = 0.001, momentum_rate=0.9):
+    def set_hyperparameters(self,epoch_size = 60, batch_size = 128, iNumberOfHiddenNeurons = None, dropout_rate_encoder = 0.2,dropout_rate_decoder=0.2, recurrent_dropout_rate_encoder = 0.2, recurrent_dropout_rate_decoder=0.2, learning_rate = 0.001, momentum_rate=0.9):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
         if iNumberOfHiddenNeurons is None:
