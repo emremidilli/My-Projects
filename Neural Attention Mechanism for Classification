@@ -31,9 +31,9 @@ class Encoder(tf.keras.Model):
 class BahdanauAttention(tf.keras.layers.Layer):
     def __init__(self, units, oKernelRegulizer):
         super(BahdanauAttention, self).__init__()
-        self.W1 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer)
-        self.W2 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer)
-        self.V = tf.keras.layers.Dense(1,kernel_regularizer=oKernelRegulizer)
+        self.W1 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer, activation = 'sigmoid')
+        self.W2 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer, activation = 'sigmoid')
+        self.V = tf.keras.layers.Dense(1,kernel_regularizer=oKernelRegulizer, activation = 'sigmoid')
     
     def call(self, query, values): # query = decoder_hidden, values = encoder_output
         # query hidden state shape == (batch_size, hidden size)(64, 1024)
@@ -76,7 +76,7 @@ class Decoder(tf.keras.Model):
                                         kernel_regularizer = oKernelRegulizer)
         
         self.fc = tf.keras.layers.Dense(one_hot_size, activation = 'softmax', 
-                                        kernel_regularizer=oKernelRegulizer)
+                                        kernel_regularizer=oKernelRegulizer,)
     
         self.attention = BahdanauAttention(self.dec_units, oKernelRegulizer)
     
@@ -215,12 +215,9 @@ class Neural_Attention_Mechanism(tf.keras.Model):
                 aActualTimeStep = aScaledOutputValidation[0:1, t*self.feature_size_target:(t+1)*self.feature_size_target]
                 decValidationLoss += self.loss_function(aActualTimeStep, aPredictionTimeStep)
             
-            
+            decValidationLoss = decValidationLoss/self.iForwardTimeWindow
             
             decTraningLoss = decTraningLoss/(batch+1)
-            decValidationLoss = decValidationLoss/(aScaledOutputValidation.shape[0])
-            
-            decValidationLoss = decValidationLoss/self.iForwardTimeWindow
 
             
             decTraningLoss = decTraningLoss.numpy()
