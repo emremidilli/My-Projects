@@ -21,8 +21,8 @@ gc_dt_SIMULATION_MODEL_FROM = "2021-01-01 00:00:00"
 gc_a_SYMBOLS = ['WTI','BRENT', 'NAT.GAS'] #['ETHUSD', 'LTCUSD', 'XRPUSD', 'BTCUSD']
 
 gc_a_SEASONAL_FEATURES = ["year", "month", "day", "dayofweek", "hour"]
-gc_a_INPUT_FEATURES = ['open', 'high', 'low', 'close', 'tick_volume', 'spread']
-gc_a_INPUT_FEATURES = gc_a_INPUT_FEATURES + gc_a_SEASONAL_FEATURES
+gc_a_MARKET_FEATURES = ['open', 'high', 'low', 'close']
+gc_a_INPUT_FEATURES = gc_a_MARKET_FEATURES + gc_a_SEASONAL_FEATURES
 gc_a_METRICS = ["mse", "rmse", "mae", "r2", "mape", "accuracy", "precision", "recall", "f1-score"]
 
 
@@ -141,7 +141,7 @@ def dfPredict(sSymbol, oPredictiveModel, dfInput, dtOutputIndices, dfOutputColum
 
     dfInputScaled = oScalerInput.transform(dfInput)
 
-    aScaledPrediction = oPredictiveModel.aPredict(dfInputScaled)
+    _, aScaledPrediction = oPredictiveModel.aPredict(dfInputScaled)
 
     aPrediction = oScalerOutput.inverse_transform(aScaledPrediction)
 
@@ -306,9 +306,7 @@ def dfTrain(bIsClassification = False):
         oPredictiveModel.train(aScaledInputTrain, aScaledOutputTrain,aScaledInputValidation, aScaledOutputValidation)
     
     
-        dfLosses = pd.DataFrame(oPredictiveModel.history.history)
-        dfLosses.plot()
-    
+
         dfPrediction, dfScaledPrediction = dfPredict(sSymbol, oPredictiveModel, dfInputTest, dfOutputTest.index, dfOutputTest.columns)
     
         dfUnscaledMetrics = dfUnscaledMetrics.append(
@@ -330,7 +328,27 @@ def dfTrain(bIsClassification = False):
                 columns=dfOutputTest.columns
             )
         )
+        
+        
     
+        dfHistory = pd.DataFrame(oPredictiveModel.history.history)
+        
+        dfHistory[[
+            "training loss", 
+            "validation loss"]].plot()
+        
+        
+        dfHistory[[
+            'training accuracy',
+            'validation accuracy',
+            'training precision',
+            'validation precision',
+            'training recall',
+            'validation recall',
+            'training f1-score',
+            'validation f1-score'
+            ]].plot()
+
         serModels = serModels.append(
             pd.Series(data=oPredictiveModel, index=[sSymbol]))
 
