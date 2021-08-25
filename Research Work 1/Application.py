@@ -132,10 +132,10 @@ def AddReturnClassLabels(dfToClassify, aClassLabels):
 
 def dfPredict(sSymbol, oPredictiveModel, dfInput, dtOutputIndices, dfOutputColumns):
     
-    sScalersDirectory = os.path.join(sSymbol, "/__scalers__/")
+    sScalersDirectory = os.path.join(sSymbol, "__scalers__")
     
-    sScalerFilePathInput =sScalersDirectory + ' input.sav'
-    sScalerFilePathOutput = sScalersDirectory + ' target.sav'
+    sScalerFilePathInput =os.path.join(sScalersDirectory, "input.sav")
+    sScalerFilePathOutput = os.path.join(sScalersDirectory, "target.sav")
 
     oScalerInput = pickle.load(open(sScalerFilePathInput, 'rb'))
     oScalerOutput = pickle.load(open(sScalerFilePathOutput, 'rb'))
@@ -285,13 +285,13 @@ def dfTrain(bIsClassification = False):
 
         aScaledOutputTest = oScalerOutput.transform(dfOutputTest)
     
-        sScalersDirectory = os.path.join(sSymbol, "/__scalers__/")
+        sScalersDirectory = os.path.join(sSymbol, "__scalers__")
         
-        os.makedirs(os.path.dirname(sScalersDirectory), exist_ok=True)
+        sScalerFilePathInput =os.path.join(sScalersDirectory, "input.sav")
+        sScalerFilePathOutput = os.path.join(sScalersDirectory, "target.sav")
         
-        sScalerFilePathInput =sScalersDirectory + ' input.sav'
-        sScalerFilePathOutput = sScalersDirectory + ' target.sav'
-        
+        os.makedirs(os.path.dirname(sScalerFilePathInput), exist_ok=True)
+        os.makedirs(os.path.dirname(sScalerFilePathOutput), exist_ok=True)
     
         pickle.dump(oScalerInput, open(sScalerFilePathInput, 'wb'))
         pickle.dump(oScalerOutput, open(sScalerFilePathOutput, 'wb'))
