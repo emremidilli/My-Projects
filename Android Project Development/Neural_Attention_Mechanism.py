@@ -22,7 +22,8 @@ class Encoder(tf.keras.Model):
 
     def initialize_hidden_state(self):
         return tf.zeros((self.batch_sz, self.enc_units))
-
+    
+    
 
 class BahdanauAttention(tf.keras.layers.Layer):
     def __init__(self, units):
@@ -89,21 +90,21 @@ class Decoder(tf.keras.Model):
 
 
 class Neural_Attention_Mechanism(tf.keras.Model):
-    def __init__(self, model_id,feature_size_x , feature_size_y, window_length_x,window_length_y): 
+    def __init__(self, model_id,iFeatureSizeX , iFeatureSizeY, iWindowLengthX,iWindowLengthY): 
         super(Neural_Attention_Mechanism, self).__init__()
         self.model_id = model_id
         
         self.model_directory = os.path.join(self.model_id, "__model__")
 
-        self.feature_size_input = feature_size_x
-        self.feature_size_target = feature_size_y
-        self.backward_window_length = window_length_x
-        self.forward_window_length = window_length_y
+        self.feature_size_input = iFeatureSizeX
+        self.feature_size_target = iFeatureSizeY
+        self.backward_window_length = iWindowLengthX
+        self.forward_window_length = iWindowLengthY
         
         self.set_hyperparameters()
         
     
-    def set_hyperparameters(self,epoch_size = 10, batch_size = 112, number_of_hidden_neuron = None, dropout_rate_encoder = 0.1,dropout_rate_decoder=0.1, recurrent_dropout_rate_encoder = 0.1, recurrent_dropout_rate_decoder=0.1, learning_rate = 0.001, momentum_rate=0.1):
+    def set_hyperparameters(self,epoch_size = 10, batch_size = 128, number_of_hidden_neuron = None, dropout_rate_encoder = 0,dropout_rate_decoder=0, recurrent_dropout_rate_encoder = 0, recurrent_dropout_rate_decoder=0, learning_rate = 0.001, momentum_rate=0.9):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
         if number_of_hidden_neuron is None:
@@ -184,7 +185,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.save_weights(self.model_directory)
         
     
-    def predict(self, input_tensor_test):
+    def aPredict(self, input_tensor_test):
         self.load_weights(self.model_directory)
         
         batch_size_test = len(input_tensor_test)
@@ -217,6 +218,5 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             
             predictions = p2
         
-        
-        
+
         return predictions

@@ -6,7 +6,6 @@ import Neural_Attention_Mechanism
 import Multi_Layer_Perceptron
 import pickle
 import pandas as pd
-import Calculate_Accuracy
 
 
 gc_dec_INITIAL_BALANCE = 150
@@ -15,13 +14,14 @@ gc_dt_FROM_DATE = '2021-03-29 00:00:00.000'
 gc_dt_TO_DATE = '2021-04-01 00:00:00.000'
 gc_i_TIME_STEPS_TO_SKIP = 4
         
+
     
 def dfPredict(sModelId, dtTimeStamp):
     dfInput, dfTimeStepsInput = Preprocess.dfGetFeatureValues(sModelId, "1",dtTimeStamp, dtTimeStamp)
     dfOutput, dfTimeStepsOutput = Preprocess.dfGetFeatureValues(sModelId, "2",dtTimeStamp, dtTimeStamp)
     
-    dfFeatureSizeX, dfWindowLengthX = Preprocess.dfGetDimensionSize(dfTimeStepsInput)
-    dfFeatureSizeY ,dfWindowLengthY = Preprocess.dfGetDimensionSize(dfTimeStepsOutput)
+    iFeatureSizeX, iWindowLengthX = Preprocess.dfGetDimensionSize(dfTimeStepsInput)
+    iFeatureSizeY ,iWindowLengthY = Preprocess.dfGetDimensionSize(dfTimeStepsOutput)
                 
     dfInputIndex = dfInput.index
     
@@ -37,11 +37,11 @@ def dfPredict(sModelId, dtTimeStamp):
         
         dfInputScaled = oScalerInput.transform(dfInput)
         
-        # oNeuralAttentionModel = Neural_Attention_Mechanism.Neural_Attention_Mechanism(sModelId, dfFeatureSizeX, dfFeatureSizeY, dfWindowLengthX, dfWindowLengthY)
+        # oNeuralAttentionModel = Neural_Attention_Mechanism.Neural_Attention_Mechanism(sModelId, iFeatureSizeX, iFeatureSizeY, iWindowLengthX, iWindowLengthY)
         # aPrediction = oNeuralAttentionModel.predict(dfInputScaled)
         
-        oMultiLayerPerceptron = Multi_Layer_Perceptron.Multi_Layer_Perceptron(sModelId, dfFeatureSizeX, dfFeatureSizeY, dfWindowLengthX, dfWindowLengthY)
-        aPrediction = oMultiLayerPerceptron.dfPredict(dfInputScaled)
+        oMultiLayerPerceptron = Multi_Layer_Perceptron.Multi_Layer_Perceptron(sModelId, iFeatureSizeX, iFeatureSizeY, iWindowLengthX, iWindowLengthY)
+        aPrediction = oMultiLayerPerceptron.aPredict(dfInputScaled)
         
         
         aPrediction = oScalerOutput.inverse_transform(aPrediction)

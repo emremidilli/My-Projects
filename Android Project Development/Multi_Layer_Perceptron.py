@@ -4,14 +4,14 @@ import tensorflow as tf
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import LSTM
 from tensorflow.keras import regularizers
 
 
 
-class Long_Short_Term_Memory(Sequential):
+
+class Multi_Layer_Perceptron(Sequential):
     def __init__(self, model_id,feature_size_x , feature_size_y, window_length_x,window_length_y): 
-        super(Long_Short_Term_Memory, self).__init__()
+        super(Multi_Layer_Perceptron, self).__init__()
         self.model_id = model_id
         
         self.model_directory = os.path.join(self.model_id, "__model__")
@@ -40,9 +40,10 @@ class Long_Short_Term_Memory(Sequential):
         self.activation_function = 'sigmoid'
         
         oKernelRegulizer = regularizers.l2(0.001)
-
-        self.add(LSTM(self.batch_size, return_sequences=True, kernel_regularizer=oKernelRegulizer))
         
+        self.add(Dense(self.number_of_hidden_neuron, activation = self.activation_function, kernel_regularizer=oKernelRegulizer ,input_shape = (self.backward_window_length * self.feature_size_input,)))
+        self.add(Dense(self.number_of_hidden_neuron, activation = self.activation_function, kernel_regularizer=oKernelRegulizer))
+        self.add(Dense(self.number_of_hidden_neuron, activation = self.activation_function, kernel_regularizer=oKernelRegulizer))
         self.add(Dense((self.forward_window_length * self.feature_size_target), kernel_regularizer=oKernelRegulizer))
 
         self.compile(optimizer=self.optimizer, loss=self.loss_function)
@@ -55,13 +56,7 @@ class Long_Short_Term_Memory(Sequential):
         
         oEarlyStop = EarlyStopping(monitor = 'val_loss', mode = 'min', verbose = 0 , patience = 15)
         
-        aInputTrainExpanded = tf.expand_dims(aInputTrain, axis = 1)
-        aOutputTrainExpanded = tf.expand_dims(aOutputTrain, axis = 1)
-        aInputValidationExpanded = tf.expand_dims(aInputValidation, axis = 1)
-        aOutputValidationExpanded = tf.expand_dims(aOutputValidation, axis = 1)
-        
-        
-        self.fit(aInputTrainExpanded, aOutputTrainExpanded, epochs=self.epoch_size, batch_size=self.batch_size, verbose=0, validation_data= (aInputValidationExpanded, aOutputValidationExpanded), callbacks=[oEarlyStop] )
+        self.fit(aInputTrain, aOutputTrain, epochs=self.epoch_size, batch_size=self.batch_size, verbose=0, validation_data= (aInputValidation, aOutputValidation), callbacks=[oEarlyStop] )
             
         checkpoint.write(file_prefix = checkpoint_prefix)
         checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
@@ -71,10 +66,6 @@ class Long_Short_Term_Memory(Sequential):
     def aPredict(self, aInputTest):
         self.load_weights(self.model_directory)
         
-        aInputTestExpanded = tf.expand_dims(aInputTest, axis = 1)
+        aPredictions = self.predict(aInputTest)
         
-        aPredictions = self.predict(aInputTestExpanded)
-        
-        aPredictions = tf.squeeze(aPredictions, [1])
-
         return aPredictions

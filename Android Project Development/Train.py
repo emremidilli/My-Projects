@@ -19,9 +19,6 @@ gc_dt_TO_DATE = '2021-03-26 23:00:00.000'
 
 
 
-
-
-
 def main():
     
     dfModels = Preprocess.dfGetModels()
@@ -45,8 +42,8 @@ def main():
                         
             df_test_index = tensor_input_test.index
             
-            feature_size_x, window_length_x = Preprocess.dfGetDimensionSize(df_time_steps_input)
-            feature_size_y, window_length_y = Preprocess.dfGetDimensionSize(df_time_steps_target)
+            iFeatureSizeX, iWindowLengthX = Preprocess.dfGetDimensionSize(df_time_steps_input)
+            iFeatureSizeY, iWindowLengthY = Preprocess.dfGetDimensionSize(df_time_steps_target)
             df_time_steps_target = df_time_steps_target.transpose()
     
             scaler_input = MinMaxScaler()
@@ -63,13 +60,13 @@ def main():
             scaled_input_test = scaler_input.transform(tensor_input_test)
             scaled_target_test = scaler_target.transform(tensor_target_test)
             
-            # o_model_neural_attention = Neural_Attention_Mechanism.Neural_Attention_Mechanism(model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
+            # o_model_neural_attention = Neural_Attention_Mechanism.Neural_Attention_Mechanism(model_id, iFeatureSizeX, iFeatureSizeY, iWindowLengthX, iWindowLengthY)
             # o_model_neural_attention.train(scaled_input_train, scaled_target_train)
             # prediction = o_model_neural_attention.predict(scaled_input_test)
 
-            oMultiLayerPerceptron = Multi_Layer_Perceptron.Multi_Layer_Perceptron(model_id, feature_size_x, feature_size_y, window_length_x, window_length_y)
+            oMultiLayerPerceptron = Multi_Layer_Perceptron.Multi_Layer_Perceptron(model_id, iFeatureSizeX, iFeatureSizeY, iWindowLengthX, iWindowLengthY)
             oMultiLayerPerceptron.train(scaled_input_train, scaled_target_train)
-            prediction = oMultiLayerPerceptron.dfPredict(scaled_input_test)
+            prediction = oMultiLayerPerceptron.aPredict(scaled_input_test)
 
             prediction = scaler_target.inverse_transform(prediction)
             prediction = pd.DataFrame(prediction)
