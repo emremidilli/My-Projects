@@ -36,7 +36,7 @@ gc_dec_VALIDATION_RATIO = 0.2
 gc_dec_TEST_RATIO = round(1 - (gc_dec_TRAINING_RATIO + gc_dec_VALIDATION_RATIO), 2)
 
 
-gc_s_SCALERS_PATH = './__scalers__/'
+gc_s_SCALERS_PATH = r'C:\Users\yunus\Documents\2020-2021 RTU\Second Semester\Research Work/__scalers__/'
 gc_dec_MAX_RISK_RMSE = 0.10
 gc_dec_INITIAL_BALANCE = 1000
 
