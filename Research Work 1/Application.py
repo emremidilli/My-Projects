@@ -315,7 +315,7 @@ def dfTrain(bIsClassification = False):
         
         
         
-        oPredictiveModel.train(aScaledInputTrain, aScaledOutputTrain,aScaledInputValidation, aScaledOutputValidation)
+        oPredictiveModel.Train(aScaledInputTrain, aScaledOutputTrain,aScaledInputValidation, aScaledOutputValidation)
     
     
 
