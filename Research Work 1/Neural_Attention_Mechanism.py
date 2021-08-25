@@ -169,7 +169,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
                 dec_input = tf.expand_dims(targ[:, t], 1)
           
 
-        variables = self.encoder.Trainable_variables + self.decoder.Trainable_variables
+        variables = self.encoder.trainable_variables + self.decoder.trainable_variables
         gradients = tape.gradient(loss, variables)
         self.optimizer.apply_gradients(zip(gradients, variables))
         
