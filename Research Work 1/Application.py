@@ -265,12 +265,9 @@ def dfTrain(bIsClassification = False):
             test_size=gc_dec_VALIDATION_RATIO * gc_dec_TEST_RATIO,
             shuffle=False)
     
-        # oScalerInput = MinMaxScaler()
-        oScalerOutput = MinMaxScaler()
-        
-        
+    
         oScalerInput = StandardScaler()
-        # oScalerOutput = StandardScaler()
+        oScalerOutput = MinMaxScaler()
         
         aScaledInputTrain = oScalerInput.fit_transform(dfInputTrain)
         aScaledOutputTrain = oScalerOutput.fit_transform(dfOutputTrain)
