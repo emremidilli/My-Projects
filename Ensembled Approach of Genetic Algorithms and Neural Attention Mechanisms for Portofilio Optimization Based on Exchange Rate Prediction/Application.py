@@ -286,9 +286,11 @@ def dfTrain(bIsClassification = False):
         aScaledOutputTest = oScalerOutput.transform(dfOutputTest)
     
         sScalersDirectory = os.path.join(sSymbol, "__scalers__")
+        os.makedirs(os.path.dirname(sScalersDirectory), exist_ok=True)
         
         sScalerFilePathInput =sScalersDirectory + ' input.sav'
         sScalerFilePathOutput = sScalersDirectory + ' target.sav'
+        
     
         pickle.dump(oScalerInput, open(sScalerFilePathInput, 'wb'))
         pickle.dump(oScalerOutput, open(sScalerFilePathOutput, 'wb'))
