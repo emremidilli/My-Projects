@@ -118,10 +118,10 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.iBackwardTimeWindow = iWindowLengthX
         self.iForwardTimeWindow = iWindowLengthY
         
-        self.set_hyperparameters()
+        self.SetHyperparameters()
         
     
-    def set_hyperparameters(self,epoch_size = 50, batch_size = 128, iNumberOfHiddenNeurons = None, fDropoutRateEncoder = 0.0,fDropoutRateDecoder=0.0, fRecurrentDropoutRateEncoder = 0.0, fRecurrentDropoutRateDecoder=0.0, learning_rate = 0.01, momentum_rate=0.9):
+    def SetHyperparameters(self,epoch_size = 50, batch_size = 128, iNumberOfHiddenNeurons = None, fDropoutRateEncoder = 0.0,fDropoutRateDecoder=0.0, fRecurrentDropoutRateEncoder = 0.0, fRecurrentDropoutRateDecoder=0.0, learning_rate = 0.01, momentum_rate=0.9):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
         
@@ -151,7 +151,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
     
     
     @tf.function
-    def train_step(self, inp, targ, enc_hidden):        
+    def TrainStep(self, inp, targ, enc_hidden):        
         loss = 0.0
         with tf.GradientTape() as tape:            
             enc_output, enc_hidden = self.encoder(inp, enc_hidden)
@@ -169,7 +169,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
                 dec_input = tf.expand_dims(targ[:, t], 1)
           
 
-        variables = self.encoder.trainable_variables + self.decoder.trainable_variables
+        variables = self.encoder.Trainable_variables + self.decoder.Trainable_variables
         gradients = tape.gradient(loss, variables)
         self.optimizer.apply_gradients(zip(gradients, variables))
         
@@ -226,27 +226,27 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         decValidationLoss = decValidationLoss.numpy()
         
         dicHistory = {
-                'training loss':[decTrainingLoss], 
+                'Training loss':[decTrainingLoss], 
                 'validation loss': [decValidationLoss],
-                'training accuracy': [decTrainingAccuracy],
+                'Training accuracy': [decTrainingAccuracy],
                 'validation accuracy': [decValidationAccuracy],
-                'training precision': [decTrainingPrecision],
+                'Training precision': [decTrainingPrecision],
                 'validation precision': [decValidationPrecision],
-                'training recall': [decTrainingRecall],
+                'Training recall': [decTrainingRecall],
                 'validation recall': [decValidationRecall],
-                'training f1-score': [decTrainingF1Score],
+                'Training f1-score': [decTrainingF1Score],
                 'validation f1-score': [decValidationF1Score]
                 }
         
         return dicHistory
         
     
-    def train(self, aScaledInputTrain, aScaledOutputTrain, aScaledInputValidation, aScaledOutputValidation):        
-        checkpoint_dir = os.path.join(self.model_id, "__training checkpoints__")
+    def Train(self, aScaledInputTrain, aScaledOutputTrain, aScaledInputValidation, aScaledOutputValidation):        
+        checkpoint_dir = os.path.join(self.model_id, "__Training checkpoints__")
         checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
         
         
-        oCheckPoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
+        oCheckPoint = tf.Train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
         
         steps_per_epoch = len(aScaledInputTrain)//self.batch_size
         buffer_size = len(aScaledInputTrain)
@@ -268,13 +268,13 @@ class Neural_Attention_Mechanism(tf.keras.Model):
                 inp = tf.reshape(inp, (self.batch_size, self.iBackwardTimeWindow, self.feature_size_input))
                 targ = tf.reshape(targ, (self.batch_size, self.iForwardTimeWindow,self.feature_size_target))
                 
-                self.train_step(inp, targ, encoder_hidden)
+                self.TrainStep(inp, targ, encoder_hidden)
                 
                 
             if (epoch + 1) % 2 == 0 or epoch == 0:
                 oCheckPoint.write(file_prefix = checkpoint_prefix)
  
-            oCheckPoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+            oCheckPoint.restore(tf.Train.latest_checkpoint(checkpoint_dir))
         
             self.save_weights(self.model_directory)
             
