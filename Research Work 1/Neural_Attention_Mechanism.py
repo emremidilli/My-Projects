@@ -6,18 +6,18 @@ from sklearn import metrics
 
 
 class Encoder(tf.keras.Model):
-    def __init__(self, one_hot_size, enc_units, batch_sz, activation_function, dropout_rate, recurrent_dropout_rate, oKernelRegulizer):
+    def __init__(self, iFeatureSizeX, iEncoderiUnits, iBatchSize, sActivationFunction, fDropoutRate, fRecurrentDropoutRate, oKernelRegulizer):
         super(Encoder, self).__init__()
-        self.batch_sz = batch_sz
-        self.enc_units = enc_units
+        self.iBatchSize = iBatchSize
+        self.iEncoderiUnits = iEncoderiUnits
         
-        self.gru = tf.keras.layers.GRU(self.enc_units,
+        self.gru = tf.keras.layers.GRU(self.iEncoderiUnits,
                                         return_sequences=True,
                                         return_state=True,
                                         recurrent_initializer='glorot_uniform',
-                                        # activation = activation_function, 
-                                        dropout = dropout_rate , 
-                                        recurrent_dropout= recurrent_dropout_rate,
+                                        # activation = sActivationFunction, 
+                                        dropout = fDropoutRate , 
+                                        recurrent_dropout= fRecurrentDropoutRate,
                                         kernel_regularizer=oKernelRegulizer)
 
     def call(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (iBackwardTimeWindow, backward_feature_size) 
@@ -25,68 +25,68 @@ class Encoder(tf.keras.Model):
       return output, state
 
     def initialize_hidden_state(self):
-        return tf.zeros((self.batch_sz, self.enc_units))
+        return tf.zeros((self.iBatchSize, self.iEncoderiUnits))
     
     
 
 class BahdanauAttention(tf.keras.layers.Layer):
-    def __init__(self, units, oKernelRegulizer):
+    def __init__(self, iUnits, oKernelRegulizer):
         super(BahdanauAttention, self).__init__()
-        self.W1 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer)
-        self.W2 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer)
+        self.W1 = tf.keras.layers.Dense(iUnits, kernel_regularizer=oKernelRegulizer)
+        self.W2 = tf.keras.layers.Dense(iUnits, kernel_regularizer=oKernelRegulizer)
         self.V = tf.keras.layers.Dense(1,kernel_regularizer=oKernelRegulizer)
     
-    def call(self, query, values): # query = decoder_hidden, values = encoder_output
-        # query hidden state shape == (batch_size, hidden size)(64, 1024)
-        # query_with_time_axis shape == (batch_size, 1, hidden size) (64, 1 , 1024)
-        # values shape == (batch_size, max_len, hidden size) (64, 16, 1024)
+    def call(self, aQuery, aValues): # aQuery = decoder_hidden, aValues = encoder_output
+        # aQuery hidden state shape == (batch_size, hidden size)(64, 1024)
+        # aQueryWithTimeAxis shape == (batch_size, 1, hidden size) (64, 1 , 1024)
+        # aValues shape == (batch_size, max_len, hidden size) (64, 16, 1024)
         # we are doing this to broadcast addition along the time axis to calculate the score
-        query_with_time_axis = tf.expand_dims(query, 1)
+        aQueryWithTimeAxis = tf.expand_dims(aQuery, 1)
     
         # score shape == (batch_size, max_length, 1) (64, 16, 1)
         # we get 1 at the last axis because we are applying score to self.V
-        # the shape of the tensor before applying self.V is (batch_size, max_length, units) (64, 16, 1024)
-        score = self.V(tf.nn.tanh(
-            self.W1(query_with_time_axis) + self.W2(values)))
+        # the shape of the tensor before applying self.V is (batch_size, max_length, iUnits) (64, 16, 1024)
+        aScore = self.V(tf.nn.tanh(
+            self.W1(aQueryWithTimeAxis) + self.W2(aValues)))
         
-        #Attention_weights shape == (batch_size, max_length, 1) (64, 16,1)
-        attention_weights = tf.nn.softmax(score, axis=1)
+        #aAttentionWeights shape == (batch_size, max_length, 1) (64, 16,1)
+        aAttentionWeights = tf.nn.softmax(aScore, axis=1)
     
-        # context_vector shape after sum == (batch_size, hidden_size) (64, 1024)
-        context_vector = attention_weights * values
-        context_vector = tf.reduce_sum(context_vector, axis=1)
+        # aContextVector shape after sum == (batch_size, hidden_size) (64, 1024)
+        aContextVector = aAttentionWeights * aValues
+        aContextVector = tf.reduce_sum(aContextVector, axis=1)
         
         
     
-        return context_vector, attention_weights
+        return aContextVector, aAttentionWeights
 
 
 class Decoder(tf.keras.Model):
-    def __init__(self, one_hot_size, dec_units, batch_sz, activation_function, dropout_rate, recurrent_dropout_rate, oKernelRegulizer): 
+    def __init__(self, iFeatureSizeX, iDecoderUnits, iBatchSize, sActivationFunction, fDropoutRate, fRecurrentDropoutRate, oKernelRegulizer): 
         super(Decoder, self).__init__()
-        self.batch_sz = batch_sz
-        self.dec_units = dec_units
+        self.iBatchSize = iBatchSize
+        self.iDecoderUnits = iDecoderUnits
     
-        self.gru = tf.keras.layers.GRU(self.dec_units,
+        self.gru = tf.keras.layers.GRU(self.iDecoderUnits,
                                         return_sequences=True, #We use return_sequences=True here because we'd like to access the complete encoded sequence rather than the final summary state.
                                         return_state=True,
                                         recurrent_initializer='glorot_uniform',
-                                        # activation = activation_function,
-                                        dropout = dropout_rate , 
-                                        recurrent_dropout= recurrent_dropout_rate,
+                                        # activation = sActivationFunction,
+                                        dropout = fDropoutRate , 
+                                        recurrent_dropout= fRecurrentDropoutRate,
                                         kernel_regularizer = oKernelRegulizer)
         
-        self.fc = tf.keras.layers.Dense(one_hot_size, activation = 'relu', 
+        self.fc = tf.keras.layers.Dense(iFeatureSizeX, activation = 'relu', 
                                         kernel_regularizer=oKernelRegulizer,)
     
-        self.attention = BahdanauAttention(self.dec_units, oKernelRegulizer)
+        self.attention = BahdanauAttention(self.iDecoderUnits, oKernelRegulizer)
     
     def call(self, x, hidden, enc_output, bReturnOneHotEncoded = False): # dec_input, dec_hidden, enc_output
     
         # enc_output shape == (batch_size, max_length, hidden_size)
-        context_vector, attention_weights = self.attention(hidden, enc_output)
+        aContextVector, aAttentionWeights = self.attention(hidden, enc_output)
     
-        x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
+        x = tf.concat([tf.expand_dims(aContextVector, 1), x], axis=-1)
     
         # passing the concatenated vector to the GRU
         output, state = self.gru(x)
@@ -100,9 +100,9 @@ class Decoder(tf.keras.Model):
         if bReturnOneHotEncoded == True:
             aOneHotEncoded = tf.one_hot(tf.nn.top_k(x).indices, tf.shape(x)[1])
             aOneHotEncoded = tf.squeeze(aOneHotEncoded, [1])
-            return x, state, attention_weights, aOneHotEncoded
+            return x, state, aAttentionWeights, aOneHotEncoded
         else:
-            return x, state, attention_weights
+            return x, state, aAttentionWeights
     
 
 
@@ -121,7 +121,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.set_hyperparameters()
         
     
-    def set_hyperparameters(self,epoch_size = 50, batch_size = 128, iNumberOfHiddenNeurons = None, dropout_rate_encoder = 0.0,dropout_rate_decoder=0.0, recurrent_dropout_rate_encoder = 0.0, recurrent_dropout_rate_decoder=0.0, learning_rate = 0.01, momentum_rate=0.9):
+    def set_hyperparameters(self,epoch_size = 50, batch_size = 128, iNumberOfHiddenNeurons = None, fDropoutRateEncoder = 0.0,fDropoutRateDecoder=0.0, fRecurrentDropoutRateEncoder = 0.0, fRecurrentDropoutRateDecoder=0.0, learning_rate = 0.01, momentum_rate=0.9):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
         
@@ -129,10 +129,10 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             iNumberOfHiddenNeurons = self.feature_size_input*self.iBackwardTimeWindow*2
             
         self.iNumberOfHiddenNeurons = iNumberOfHiddenNeurons
-        self.dropout_rate_encoder = dropout_rate_encoder
-        self.dropout_rate_decoder = dropout_rate_decoder
-        self.recurrent_dropout_rate_encoder = recurrent_dropout_rate_encoder
-        self.recurrent_dropout_rate_decoder = recurrent_dropout_rate_decoder
+        self.fDropoutRateEncoder = fDropoutRateEncoder
+        self.fDropoutRateDecoder = fDropoutRateDecoder
+        self.fRecurrentDropoutRateEncoder = fRecurrentDropoutRateEncoder
+        self.fRecurrentDropoutRateDecoder = fRecurrentDropoutRateDecoder
         self.learning_rate = learning_rate
         self.momentum_rate = momentum_rate
         
@@ -142,12 +142,12 @@ class Neural_Attention_Mechanism(tf.keras.Model):
     
         
         self.loss_function = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        self.activation_function = 'tanh'
+        self.sActivationFunction = 'tanh'
         
         self.oKernelRegulizer = tf.keras.regularizers.l1(0.0001)
         
-        self.encoder = Encoder(self.feature_size_input, self.iNumberOfHiddenNeurons, self.batch_size,self.activation_function, self.dropout_rate_encoder, self.recurrent_dropout_rate_encoder, self.oKernelRegulizer)
-        self.decoder = Decoder(self.feature_size_target, self.iNumberOfHiddenNeurons, self.batch_size, self.activation_function, self.dropout_rate_decoder, self.recurrent_dropout_rate_decoder, self.oKernelRegulizer)
+        self.encoder = Encoder(self.feature_size_input, self.iNumberOfHiddenNeurons, self.batch_size,self.sActivationFunction, self.fDropoutRateEncoder, self.fRecurrentDropoutRateEncoder, self.oKernelRegulizer)
+        self.decoder = Decoder(self.feature_size_target, self.iNumberOfHiddenNeurons, self.batch_size, self.sActivationFunction, self.fDropoutRateDecoder, self.fRecurrentDropoutRateDecoder, self.oKernelRegulizer)
     
     
     @tf.function
