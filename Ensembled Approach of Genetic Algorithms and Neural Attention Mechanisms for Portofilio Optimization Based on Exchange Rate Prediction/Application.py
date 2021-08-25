@@ -4,6 +4,7 @@ import MetaTrader5 as mt5
 import pytz
 import sys
 import pickle
+import os
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -36,7 +37,6 @@ gc_dec_VALIDATION_RATIO = 0.2
 gc_dec_TEST_RATIO = round(1 - (gc_dec_TRAINING_RATIO + gc_dec_VALIDATION_RATIO), 2)
 
 
-gc_s_SCALERS_PATH = r'C:\Users\yunus\Documents\2020-2021 RTU\Second Semester\Research Work/__scalers__/'
 gc_dec_MAX_RISK_RMSE = 0.10
 gc_dec_INITIAL_BALANCE = 1000
 
@@ -131,9 +131,11 @@ def AddReturnClassLabels(dfToClassify, aClassLabels):
 
 
 def dfPredict(sSymbol, oPredictiveModel, dfInput, dtOutputIndices, dfOutputColumns):
-
-    sScalerFilePathInput = gc_s_SCALERS_PATH + sSymbol + ' input.sav'
-    sScalerFilePathOutput = gc_s_SCALERS_PATH + sSymbol + ' target.sav'
+    
+    sScalersDirectory = os.path.join(sSymbol, "__scalers__")
+    
+    sScalerFilePathInput =sScalersDirectory + ' input.sav'
+    sScalerFilePathOutput = sScalersDirectory + ' target.sav'
 
     oScalerInput = pickle.load(open(sScalerFilePathInput, 'rb'))
     oScalerOutput = pickle.load(open(sScalerFilePathOutput, 'rb'))
@@ -283,8 +285,10 @@ def dfTrain(bIsClassification = False):
 
         aScaledOutputTest = oScalerOutput.transform(dfOutputTest)
     
-        sScalerFilePathInput = gc_s_SCALERS_PATH + sSymbol + ' input.sav'
-        sScalerFilePathOutput = gc_s_SCALERS_PATH + sSymbol + ' target.sav'
+        sScalersDirectory = os.path.join(sSymbol, "__scalers__")
+        
+        sScalerFilePathInput =sScalersDirectory + ' input.sav'
+        sScalerFilePathOutput = sScalersDirectory + ' target.sav'
     
         pickle.dump(oScalerInput, open(sScalerFilePathInput, 'wb'))
         pickle.dump(oScalerOutput, open(sScalerFilePathOutput, 'wb'))

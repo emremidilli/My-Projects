@@ -5,8 +5,6 @@ import pandas as pd
 from sklearn import metrics
 
 
-gc_s_PROJECT_DIRECTORY = r'C:\Users\yunus\Documents\2020-2021 RTU\Second Semester\Research Work'
-
 class Encoder(tf.keras.Model):
     def __init__(self, one_hot_size, enc_units, batch_sz, activation_function, dropout_rate, recurrent_dropout_rate, oKernelRegulizer):
         super(Encoder, self).__init__()
@@ -245,7 +243,6 @@ class Neural_Attention_Mechanism(tf.keras.Model):
     
     def train(self, aScaledInputTrain, aScaledOutputTrain, aScaledInputValidation, aScaledOutputValidation):        
         checkpoint_dir = os.path.join(self.model_id, "__training checkpoints__")
-        checkpoint_dir = os.path.join(gc_s_PROJECT_DIRECTORY, checkpoint_dir)
         checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")    
         checkpoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
         
