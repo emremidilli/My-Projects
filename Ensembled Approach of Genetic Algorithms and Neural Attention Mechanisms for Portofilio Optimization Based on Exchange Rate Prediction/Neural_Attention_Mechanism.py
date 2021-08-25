@@ -243,8 +243,10 @@ class Neural_Attention_Mechanism(tf.keras.Model):
     
     def train(self, aScaledInputTrain, aScaledOutputTrain, aScaledInputValidation, aScaledOutputValidation):        
         checkpoint_dir = os.path.join(self.model_id, "__training checkpoints__")
-        checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")    
-        checkpoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
+        checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+        
+        
+        oCheckPoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
         
         steps_per_epoch = len(aScaledInputTrain)//self.batch_size
         buffer_size = len(aScaledInputTrain)
@@ -270,9 +272,9 @@ class Neural_Attention_Mechanism(tf.keras.Model):
                 
                 
             if (epoch + 1) % 2 == 0 or epoch == 0:
-                checkpoint.write(file_prefix = checkpoint_prefix)
+                oCheckPoint.write(file_prefix = checkpoint_prefix)
  
-            checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+            oCheckPoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
         
             self.save_weights(self.model_directory)
             

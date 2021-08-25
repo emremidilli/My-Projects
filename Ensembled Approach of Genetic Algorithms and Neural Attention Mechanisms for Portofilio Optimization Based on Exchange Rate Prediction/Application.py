@@ -132,7 +132,7 @@ def AddReturnClassLabels(dfToClassify, aClassLabels):
 
 def dfPredict(sSymbol, oPredictiveModel, dfInput, dtOutputIndices, dfOutputColumns):
     
-    sScalersDirectory = os.path.join(sSymbol, "__scalers__")
+    sScalersDirectory = os.path.join(sSymbol, "/__scalers__/")
     
     sScalerFilePathInput =sScalersDirectory + ' input.sav'
     sScalerFilePathOutput = sScalersDirectory + ' target.sav'
@@ -285,7 +285,8 @@ def dfTrain(bIsClassification = False):
 
         aScaledOutputTest = oScalerOutput.transform(dfOutputTest)
     
-        sScalersDirectory = os.path.join(sSymbol, "__scalers__")
+        sScalersDirectory = os.path.join(sSymbol, "/__scalers__/")
+        
         os.makedirs(os.path.dirname(sScalersDirectory), exist_ok=True)
         
         sScalerFilePathInput =sScalersDirectory + ' input.sav'
