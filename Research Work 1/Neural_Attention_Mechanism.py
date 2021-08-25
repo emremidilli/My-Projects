@@ -274,7 +274,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
             if (epoch + 1) % 2 == 0 or epoch == 0:
                 oCheckPoint.write(file_prefix = checkpoint_prefix)
  
-            oCheckPoint.restore(tf.Train.latest_checkpoint(checkpoint_dir))
+            oCheckPoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
         
             self.save_weights(self.model_directory)
             
