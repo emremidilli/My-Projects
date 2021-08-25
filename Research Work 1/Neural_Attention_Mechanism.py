@@ -246,7 +246,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
         
         
-        oCheckPoint = tf.Train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
+        oCheckPoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
         
         steps_per_epoch = len(aScaledInputTrain)//self.batch_size
         buffer_size = len(aScaledInputTrain)
