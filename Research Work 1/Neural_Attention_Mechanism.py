@@ -226,15 +226,15 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         decValidationLoss = decValidationLoss.numpy()
         
         dicHistory = {
-                'Training loss':[decTrainingLoss], 
+                'training loss':[decTrainingLoss], 
                 'validation loss': [decValidationLoss],
-                'Training accuracy': [decTrainingAccuracy],
+                'training accuracy': [decTrainingAccuracy],
                 'validation accuracy': [decValidationAccuracy],
-                'Training precision': [decTrainingPrecision],
+                'training precision': [decTrainingPrecision],
                 'validation precision': [decValidationPrecision],
-                'Training recall': [decTrainingRecall],
+                'training recall': [decTrainingRecall],
                 'validation recall': [decValidationRecall],
-                'Training f1-score': [decTrainingF1Score],
+                'training f1-score': [decTrainingF1Score],
                 'validation f1-score': [decValidationF1Score]
                 }
         
