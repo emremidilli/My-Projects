@@ -12,7 +12,7 @@ from datetime import datetime
 
 class PortfolioManagement():
         
-    def __init__(self, dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, decMaximumRiskMape, dfPredictionErrorMape):
+    def __init__(self, dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, decMaximumRiskRmse, dfPredictionErrorRmse):
         self.dfExpectedPricesClose= dfExpectedPricesClose
         self.dfExpectedPricesOpen= dfExpectedPricesOpen
         self.dfExpectedSpread= dfExpectedSpread
@@ -22,8 +22,8 @@ class PortfolioManagement():
         self.dfIndices = self.dfGetIndices()
         self.aPriceDiffs = self.aGetPriceDiffs(self.dfExpectedPricesClose, self.dfExpectedPricesOpen)
         self.decStepSizeRatio = 0.01
-        self.aAverageRisks = self.aGetAverageRisks(dfPredictionErrorMape)
-        self.decMaximumRiskMape = decMaximumRiskMape
+        self.aAverageRisks = self.aGetAverageRisks(dfPredictionErrorRmse)
+        self.decMaximumRiskRmse = decMaximumRiskRmse
         
         
 
@@ -140,7 +140,7 @@ class PortfolioManagement():
     
     
     
-    def aGetAverageRisks(self, dfPredictionErrorMape):
+    def aGetAverageRisks(self, dfPredictionErrorRmse):
         
         aAverageRisks = []
         
@@ -150,7 +150,7 @@ class PortfolioManagement():
             j = aRow["j"]
             k = aRow["k"]
             
-            aIntervalErrors = dfPredictionErrorMape.iloc[i][j:k+1]
+            aIntervalErrors = dfPredictionErrorRmse.iloc[i][j:k+1]
             
             decAverageRisk = np.mean(aIntervalErrors)
             
@@ -252,7 +252,7 @@ class PortfolioManagement():
             aWeightedRisks = list(np.multiply(self.aAverageRisks,aIndividualX))
             decWeightedAverage = sum(aWeightedRisks)/sum(aIndividualX)
                         
-            if decWeightedAverage > self.decMaximumRiskMape:
+            if decWeightedAverage > self.decMaximumRiskRmse:
                 decMaxRisk = max(aWeightedRisks)
                 iIndexMaxRisk = aWeightedRisks.index(decMaxRisk)
                 
@@ -355,11 +355,11 @@ class PortfolioManagement():
         oToolbox = base.Toolbox()
         oToolbox.register("evaluate", self.decEvaluateFitness)
         
-        # oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        # aOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
+        oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        aOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
         
-        oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        aOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)
+        # oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
+        # aOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)
         
         aOptimumAmounts, aOptiumumPositions = np.array_split(aOptimumResult, 2)
         

@@ -5,6 +5,7 @@ import pytz
 import sys
 import pickle
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from Optimize_Portfolio import PortfolioManagement
@@ -44,7 +45,7 @@ g_aBackwardTimeSteps = range(gc_i_BACKWARD_TIME_WINDOW, 0)
 g_aForwardTimeSteps = range(0, gc_i_FORWARD_TIME_WINDOW)
 
 gc_i_PERIODS_OF_CLASSES = 10
-gc_dec_LIMIT_OF_CLASSES = 0.05
+gc_dec_LIMIT_OF_CLASSES = 0.025
 
 
 def ConvertSpreadValues(dfRates, aSymbolInfo):
@@ -262,9 +263,13 @@ def dfTrain(bIsClassification = False):
             test_size=gc_dec_VALIDATION_RATIO * gc_dec_TEST_RATIO,
             shuffle=False)
     
-        oScalerInput = MinMaxScaler()
+        # oScalerInput = MinMaxScaler()
         oScalerOutput = MinMaxScaler()
-    
+        
+        
+        oScalerInput = StandardScaler()
+        # oScalerOutput = StandardScaler()
+        
         aScaledInputTrain = oScalerInput.fit_transform(dfInputTrain)
         aScaledOutputTrain = oScalerOutput.fit_transform(dfOutputTrain)
     
@@ -339,15 +344,27 @@ def dfTrain(bIsClassification = False):
         
         
         dfHistory[[
-            'training accuracy',
-            'validation accuracy',
             'training precision',
-            'validation precision',
+            'validation precision'
+            ]].plot()
+        
+        
+        dfHistory[[
+            'training accuracy',
+            'validation accuracy'
+            ]].plot()
+
+        dfHistory[[
             'training recall',
-            'validation recall',
+            'validation recall'
+            ]].plot()
+
+
+        dfHistory[[
             'training f1-score',
             'validation f1-score'
             ]].plot()
+
 
         serModels = serModels.append(
             pd.Series(data=oPredictiveModel, index=[sSymbol]))

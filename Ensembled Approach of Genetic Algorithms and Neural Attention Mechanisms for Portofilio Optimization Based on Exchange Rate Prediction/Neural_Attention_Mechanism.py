@@ -14,7 +14,7 @@ class Encoder(tf.keras.Model):
                                         return_sequences=True,
                                         return_state=True,
                                         recurrent_initializer='glorot_uniform',
-                                        activation = activation_function, 
+                                        # activation = activation_function, 
                                         dropout = dropout_rate , 
                                         recurrent_dropout= recurrent_dropout_rate,
                                         kernel_regularizer=oKernelRegulizer)
@@ -31,9 +31,9 @@ class Encoder(tf.keras.Model):
 class BahdanauAttention(tf.keras.layers.Layer):
     def __init__(self, units, oKernelRegulizer):
         super(BahdanauAttention, self).__init__()
-        self.W1 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer, activation = 'sigmoid')
-        self.W2 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer, activation = 'sigmoid')
-        self.V = tf.keras.layers.Dense(1,kernel_regularizer=oKernelRegulizer, activation = 'sigmoid')
+        self.W1 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer)
+        self.W2 = tf.keras.layers.Dense(units, kernel_regularizer=oKernelRegulizer)
+        self.V = tf.keras.layers.Dense(1,kernel_regularizer=oKernelRegulizer)
     
     def call(self, query, values): # query = decoder_hidden, values = encoder_output
         # query hidden state shape == (batch_size, hidden size)(64, 1024)
@@ -70,12 +70,12 @@ class Decoder(tf.keras.Model):
                                         return_sequences=True, #We use return_sequences=True here because we'd like to access the complete encoded sequence rather than the final summary state.
                                         return_state=True,
                                         recurrent_initializer='glorot_uniform',
-                                        activation = activation_function,
+                                        # activation = activation_function,
                                         dropout = dropout_rate , 
                                         recurrent_dropout= recurrent_dropout_rate,
                                         kernel_regularizer = oKernelRegulizer)
         
-        self.fc = tf.keras.layers.Dense(one_hot_size, activation = 'softmax', 
+        self.fc = tf.keras.layers.Dense(one_hot_size, activation = 'relu', 
                                         kernel_regularizer=oKernelRegulizer,)
     
         self.attention = BahdanauAttention(self.dec_units, oKernelRegulizer)
@@ -120,9 +120,10 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.set_hyperparameters()
         
     
-    def set_hyperparameters(self,epoch_size = 50, batch_size = 128, iNumberOfHiddenNeurons = None, dropout_rate_encoder = 0.2,dropout_rate_decoder=0.2, recurrent_dropout_rate_encoder = 0.2, recurrent_dropout_rate_decoder=0.2, learning_rate = 0.01, momentum_rate=0.9):
+    def set_hyperparameters(self,epoch_size = 50, batch_size = 128, iNumberOfHiddenNeurons = None, dropout_rate_encoder = 0.0,dropout_rate_decoder=0.0, recurrent_dropout_rate_encoder = 0.0, recurrent_dropout_rate_decoder=0.0, learning_rate = 0.01, momentum_rate=0.9):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
+        
         if iNumberOfHiddenNeurons is None:
             iNumberOfHiddenNeurons = self.feature_size_input*self.iBackwardTimeWindow*2
             
@@ -134,11 +135,15 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.learning_rate = learning_rate
         self.momentum_rate = momentum_rate
         
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate= self.learning_rate, beta_1=self.momentum_rate)
-        self.loss_function = tf.keras.losses.BinaryCrossentropy()
-        self.activation_function = 'sigmoid'
+        # self.optimizer = tf.keras.optimizers.Adam(learning_rate= self.learning_rate, beta_1=self.momentum_rate)
+    
+        self.optimizer = tf.keras.optimizers.SGD(learning_rate= self.learning_rate, clipvalue=0.5)
+    
         
-        self.oKernelRegulizer = tf.keras.regularizers.l1(0.01)
+        self.loss_function = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.activation_function = 'tanh'
+        
+        self.oKernelRegulizer = tf.keras.regularizers.l1(0.0001)
         
         self.encoder = Encoder(self.feature_size_input, self.iNumberOfHiddenNeurons, self.batch_size,self.activation_function, self.dropout_rate_encoder, self.recurrent_dropout_rate_encoder, self.oKernelRegulizer)
         self.decoder = Decoder(self.feature_size_target, self.iNumberOfHiddenNeurons, self.batch_size, self.activation_function, self.dropout_rate_decoder, self.recurrent_dropout_rate_decoder, self.oKernelRegulizer)
@@ -162,7 +167,6 @@ class Neural_Attention_Mechanism(tf.keras.Model):
                 # using teacher forcing
                 dec_input = tf.expand_dims(targ[:, t], 1)
           
-        batch_loss = (loss / int(targ.shape[1]))
 
         variables = self.encoder.trainable_variables + self.decoder.trainable_variables
         gradients = tape.gradient(loss, variables)
