@@ -31,9 +31,9 @@ class Encoder(tf.keras.Model):
 class BahdanauAttention(tf.keras.layers.Layer):
     def __init__(self, iUnits, oKernelRegulizer):
         super(BahdanauAttention, self).__init__()
-        self.W1 = tf.keras.layers.Dense(iUnits, kernel_regularizer=oKernelRegulizer)
-        self.W2 = tf.keras.layers.Dense(iUnits, kernel_regularizer=oKernelRegulizer)
-        self.V = tf.keras.layers.Dense(1,kernel_regularizer=oKernelRegulizer)
+        self.W1 = tf.keras.layers.Dense(iUnits, use_bias=False)
+        self.W2 = tf.keras.layers.Dense(iUnits, use_bias=False)
+        self.V = tf.keras.layers.Dense(1)
     
     def call(self, aQuery, aValues): # aQuery = decoder_hidden, aValues = encoder_output
         # aQuery hidden state shape == (batch_size, hidden size)(64, 1024)
@@ -45,8 +45,9 @@ class BahdanauAttention(tf.keras.layers.Layer):
         # score shape == (batch_size, max_length, 1) (64, 16, 1)
         # we get 1 at the last axis because we are applying score to self.V
         # the shape of the tensor before applying self.V is (batch_size, max_length, iUnits) (64, 16, 1024)
-        aScore = self.V(tf.nn.tanh(
-            self.W1(aQueryWithTimeAxis) + self.W2(aValues)))
+        aScore = self.V(
+            tf.nn.tanh(
+                self.W1(aQueryWithTimeAxis) + self.W2(aValues)))
         
         #aAttentionWeights shape == (batch_size, max_length, 1) (64, 16,1)
         aAttentionWeights = tf.nn.softmax(aScore, axis=1)
@@ -74,8 +75,11 @@ class Decoder(tf.keras.Model):
                                         recurrent_dropout= fRecurrentDropoutRate,
                                         kernel_regularizer = oKernelRegulizer)
         
-        self.fc = tf.keras.layers.Dense(iFeatureSizeX, activation = 'tanh', 
-                                        kernel_regularizer=oKernelRegulizer,)
+        self.W = tf.keras.layers.Dense(self.iDecoderUnits, 
+                                      activation=tf.math.tanh,
+                                      use_bias=False)
+        
+        self.fc = tf.keras.layers.Dense(iFeatureSizeX)
     
         self.attention = BahdanauAttention(self.iDecoderUnits, oKernelRegulizer)
     
@@ -91,7 +95,9 @@ class Decoder(tf.keras.Model):
         
         # output shape == (batch_size * 1, hidden_size)
         output = tf.reshape(output, (-1, output.shape[2]))
-    
+        
+        output = self.W(output)
+        
         # output shape == (batch_size, vocab)
         x = self.fc(output)
         
@@ -119,7 +125,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.SetHyperparameters()
         
     
-    def SetHyperparameters(self,epoch_size = 1000, batch_size = 128, iNumberOfHiddenNeurons = None, fDropoutRateEncoder = 0.0,fDropoutRateDecoder=0.0, fRecurrentDropoutRateEncoder = 0.0, fRecurrentDropoutRateDecoder=0.0, learning_rate = 0.01, momentum_rate=0.9):
+    def SetHyperparameters(self,epoch_size = 150, batch_size = 128, iNumberOfHiddenNeurons = None, fDropoutRateEncoder = 0.0,fDropoutRateDecoder=0.0, fRecurrentDropoutRateEncoder = 0.0, fRecurrentDropoutRateDecoder=0.0, learning_rate = 0.01, momentum_rate=0.9):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
         
