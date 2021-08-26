@@ -125,7 +125,7 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.SetHyperparameters()
         
     
-    def SetHyperparameters(self,epoch_size = 150, batch_size = 128, iNumberOfHiddenNeurons = None, fDropoutRateEncoder = 0.0,fDropoutRateDecoder=0.0, fRecurrentDropoutRateEncoder = 0.0, fRecurrentDropoutRateDecoder=0.0, learning_rate = 0.01, momentum_rate=0.9):
+    def SetHyperparameters(self,epoch_size = 10000, batch_size = 128, iNumberOfHiddenNeurons = None, fDropoutRateEncoder = 0.0,fDropoutRateDecoder=0.0, fRecurrentDropoutRateEncoder = 0.0, fRecurrentDropoutRateDecoder=0.0, learning_rate = 0.0001, momentum_rate=0.9):
         self.epoch_size = epoch_size
         self.batch_size = batch_size
         
@@ -140,9 +140,9 @@ class Neural_Attention_Mechanism(tf.keras.Model):
         self.learning_rate = learning_rate
         self.momentum_rate = momentum_rate
         
-        # self.optimizer = tf.keras.optimizers.Adam(learning_rate= self.learning_rate, beta_1=self.momentum_rate)
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate= self.learning_rate, beta_1=self.momentum_rate)
     
-        self.optimizer = tf.keras.optimizers.SGD(learning_rate= self.learning_rate, clipvalue=0.5)
+        # self.optimizer = tf.keras.optimizers.SGD(learning_rate= 0.01, clipvalue=0.5)
     
         self.loss_function = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         

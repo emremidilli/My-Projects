@@ -15,7 +15,7 @@ from Neural_Attention_Mechanism import Neural_Attention_Mechanism
 
 
 gc_o_TIME_ZONE = pytz.timezone("Etc/UTC")
-gc_dt_FROM = datetime(2020, 1, 1, tzinfo=gc_o_TIME_ZONE)
+gc_dt_FROM = datetime(2019, 1, 1, tzinfo=gc_o_TIME_ZONE)
 gc_dt_TO = datetime(2021, 1, 5, tzinfo=gc_o_TIME_ZONE)
 gc_dt_SIMULATION_MODEL_FROM = "2021-01-01 00:00:00"
 
@@ -29,7 +29,7 @@ gc_a_METRICS = ["mse", "rmse", "mae", "r2", "mape", "accuracy", "precision", "re
 
 
 gc_i_BACKWARD_TIME_WINDOW = -4
-gc_i_FORWARD_TIME_WINDOW = 4
+gc_i_FORWARD_TIME_WINDOW = 3
 
 
 gc_dec_TRAINING_RATIO = 0.6
@@ -81,7 +81,7 @@ def dfGetMarketData(sSymbol):
         sys.exit()
 
     aRates = mt5.copy_rates_range(
-        sSymbol, mt5.TIMEFRAME_H4, gc_dt_FROM, gc_dt_TO)
+        sSymbol, mt5.TIMEFRAME_H12, gc_dt_FROM, gc_dt_TO)
     if len(aRates) == 0:
         print("copy_rates_range() failed, error code =", mt5.last_error())
         sys.exit()
