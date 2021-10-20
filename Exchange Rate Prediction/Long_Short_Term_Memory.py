@@ -46,14 +46,14 @@ class Long_Short_Term_Memory(Sequential):
 
         self.add(LSTM(self.iBatchSize, return_sequences=True))
         
-        self.add(Dense((self.iNumberOfHiddenNeuron), kernel_regularizer=oKernelRegulizer))
+        self.add(Dense((self.iNumberOfHiddenNeuron)))
         
-        self.add(Dense((self.iNumberOfHiddenNeuron), kernel_regularizer=oKernelRegulizer))
+        self.add(Dense((self.iNumberOfHiddenNeuron)))
         
         if self.bIsClassification == True:
             self.add(Dense((self.forward_window_length * self.iFeatureSizeY), activation="sigmoid"))
         else:
-            self.add(Dense((self.forward_window_length * self.iFeatureSizeY)))
+            self.add(Dense((self.forward_window_length * self.iFeatureSizeY), activation="relu"))
 
         self.compile(optimizer=self.optimizer, loss=self.loss_function)
 
