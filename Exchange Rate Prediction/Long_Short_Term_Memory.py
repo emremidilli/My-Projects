@@ -27,7 +27,7 @@ class Long_Short_Term_Memory(Sequential):
         self.SetHyperparameters()
         
     
-    def SetHyperparameters(self, iBatchSize = 64):
+    def SetHyperparameters(self, iBatchSize = 512):
         
         self.iBatchSize = iBatchSize
         
