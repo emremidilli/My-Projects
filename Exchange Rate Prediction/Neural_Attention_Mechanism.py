@@ -6,53 +6,50 @@ from sklearn import metrics
 
 
 class Encoder(tf.keras.Model):
-    def __init__(self, iFeatureSizeX, iEncoderiUnits, iBatchSize, fDropoutRate, fRecurrentDropoutRate, oKernelRegulizer):
+    def __init__(self, iFeatureSizeX, iEncoderUnits, iBatchSize):
         super(Encoder, self).__init__()
         self.iBatchSize = iBatchSize
-        self.iEncoderiUnits = iEncoderiUnits
+        self.iEncoderUnits = iEncoderUnits
         
-        self.gru = tf.keras.layers.GRU(self.iEncoderiUnits,
+        self.gru = tf.keras.layers.GRU(self.iEncoderUnits,
                                         return_sequences=True,
                                         return_state=True,
-                                        recurrent_initializer='glorot_uniform',
-                                        dropout = fDropoutRate , 
-                                        recurrent_dropout= fRecurrentDropoutRate,
-                                        kernel_regularizer=oKernelRegulizer)
+                                        recurrent_initializer='glorot_uniform')
 
-    def call(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (iBackwardTimeWindow, backward_feature_size) 
-      output, state = self.gru(x, initial_state = hidden)
-      return output, state
+    def call(self, x, hidden): #incoming X must be a matrix since embedding layer is cancelled. Matrix shape is (iBackwardTimeWindow, backward_feature_size)
+      aOutput, aState = self.gru(x, initial_state = hidden)
+      return aOutput, aState
 
-    def initialize_hidden_state(self):
-        return tf.zeros((self.iBatchSize, self.iEncoderiUnits))
+    def aInitializeHiddenState(self):
+        return tf.zeros((self.iBatchSize, self.iEncoderUnits))
     
     
 
 class BahdanauAttention(tf.keras.layers.Layer):
-    def __init__(self, iUnits, oKernelRegulizer):
+    def __init__(self, iUnits):
         super(BahdanauAttention, self).__init__()
         self.W1 = tf.keras.layers.Dense(iUnits, use_bias=False)
         self.W2 = tf.keras.layers.Dense(iUnits, use_bias=False)
         self.V = tf.keras.layers.Dense(1)
     
-    def call(self, aQuery, aValues): # aQuery = decoder_hidden, aValues = encoder_output
-        # aQuery hidden state shape == (batch_size, hidden size)(64, 1024)
-        # aQueryWithTimeAxis shape == (batch_size, 1, hidden size) (64, 1 , 1024)
-        # aValues shape == (batch_size, max_len, hidden size) (64, 16, 1024)
+    def call(self, aQuery, aValues): # aQuery = aDecoderHidden, aValues = aEncoderOutput
+        # aQuery hidden state shape == (iBatchSize, hidden size)(64, 1024)
+        # aQueryWithTimeAxis shape == (iBatchSize, 1, hidden size) (64, 1 , 1024)
+        # aValues shape == (iBatchSize, max_len, hidden size) (64, 16, 1024)
         # we are doing this to broadcast addition along the time axis to calculate the score
         aQueryWithTimeAxis = tf.expand_dims(aQuery, 1)
     
-        # score shape == (batch_size, max_length, 1) (64, 16, 1)
+        # score shape == (iBatchSize, max_length, 1) (64, 16, 1)
         # we get 1 at the last axis because we are applying score to self.V
-        # the shape of the tensor before applying self.V is (batch_size, max_length, iUnits) (64, 16, 1024)
+        # the shape of the tensor before applying self.V is (iBatchSize, max_length, iUnits) (64, 16, 1024)
         aScore = self.V(
             tf.nn.tanh(
                 self.W1(aQueryWithTimeAxis) + self.W2(aValues)))
         
-        #aAttentionWeights shape == (batch_size, max_length, 1) (64, 16,1)
+        #aAttentionWeights shape == (iBatchSize, max_length, 1) (64, 16,1)
         aAttentionWeights = tf.nn.softmax(aScore, axis=1)
     
-        # aContextVector shape after sum == (batch_size, hidden_size) (64, 1024)
+        # aContextVector shape after sum == (iBatchSize, hidden_size) (64, 1024)
         aContextVector = aAttentionWeights * aValues
         aContextVector = tf.reduce_sum(aContextVector, axis=1)
         
@@ -62,7 +59,7 @@ class BahdanauAttention(tf.keras.layers.Layer):
 
 
 class Decoder(tf.keras.Model):
-    def __init__(self, iFeatureSizeX, iDecoderUnits, iBatchSize, fDropoutRate, fRecurrentDropoutRate, oKernelRegulizer): 
+    def __init__(self, iFeatureSizeX, iDecoderUnits, iBatchSize): 
         super(Decoder, self).__init__()
         self.iBatchSize = iBatchSize
         self.iDecoderUnits = iDecoderUnits
@@ -70,10 +67,7 @@ class Decoder(tf.keras.Model):
         self.gru = tf.keras.layers.GRU(self.iDecoderUnits,
                                         return_sequences=True, #We use return_sequences=True here because we'd like to access the complete encoded sequence rather than the final summary state.
                                         return_state=True,
-                                        recurrent_initializer='glorot_uniform',
-                                        dropout = fDropoutRate , 
-                                        recurrent_dropout= fRecurrentDropoutRate,
-                                        kernel_regularizer = oKernelRegulizer)
+                                        recurrent_initializer='glorot_uniform')
         
         self.W = tf.keras.layers.Dense(self.iDecoderUnits, 
                                       activation=tf.math.tanh,
@@ -81,261 +75,195 @@ class Decoder(tf.keras.Model):
         
         self.fc = tf.keras.layers.Dense(iFeatureSizeX, activation="sigmoid")
     
-        self.attention = BahdanauAttention(self.iDecoderUnits, oKernelRegulizer)
+        self.attention = BahdanauAttention(self.iDecoderUnits)
     
-    def call(self, x, hidden, enc_output, bReturnOneHotEncoded = False): # dec_input, dec_hidden, enc_output
+    def call(self, aX, aHidden, aEncoderOutput): # dec_input, dec_hidden, enc_output
     
-        # enc_output shape == (batch_size, max_length, hidden_size)
-        aContextVector, aAttentionWeights = self.attention(hidden, enc_output)
+        # enc_output shape == (iBatchSize, max_length, hidden_size)
+        aContextVector, aAttentionWeights = self.attention(aHidden, aEncoderOutput)
     
-        x = tf.concat([tf.expand_dims(aContextVector, 1), x], axis=-1)
+        aX = tf.concat([tf.expand_dims(aContextVector, 1), aX], axis=-1)
     
         # passing the concatenated vector to the GRU
-        output, state = self.gru(x)
+        aOutput, aState = self.gru(aX)
         
-        # output shape == (batch_size * 1, hidden_size)
-        output = tf.reshape(output, (-1, output.shape[2]))
+        # output shape == (iBatchSize * 1, hidden_size)
+        aOutput = tf.reshape(aOutput, (-1, aOutput.shape[2]))
         
-        output = self.W(output)
+        aOutput = self.W(aOutput)
         
-        # output shape == (batch_size, vocab)
-        x = self.fc(output)
+        # output shape == (iBatchSize, vocab)
+        aX = self.fc(aOutput)
         
-        if bReturnOneHotEncoded == True:
-            aOneHotEncoded = tf.one_hot(tf.nn.top_k(x).indices, tf.shape(x)[1])
-            aOneHotEncoded = tf.squeeze(aOneHotEncoded, [1])
-            return x, state, aAttentionWeights, aOneHotEncoded
-        else:
-            return x, state, aAttentionWeights
+        return aX, aState, aAttentionWeights
     
 
 
 class Neural_Attention_Mechanism(tf.keras.Model):
-    def __init__(self, model_id,iFeatureSizeX , iFeatureSizeY, iWindowLengthX,iWindowLengthY): 
+    def __init__(self, sModelId,iFeatureSizeX , iFeatureSizeY, iWindowLengthX,iWindowLengthY, oOptimizer, fncLoss, iEpochSize, iBatchSize, iNumberOfHiddenNeurons): 
         super(Neural_Attention_Mechanism, self).__init__()
-        self.model_id = model_id
+        self.sModelId = sModelId
         
-        self.model_directory = os.path.join(self.model_id, "__model__")
+        self.sModelDirectory = os.path.join(self.sModelId, "__model__")
 
-        self.feature_size_input = iFeatureSizeX
-        self.feature_size_target = iFeatureSizeY
+        self.iFeatureSizeX = iFeatureSizeX
+        self.iFeatureSizeY = iFeatureSizeY
         self.iBackwardTimeWindow = iWindowLengthX
         self.iForwardTimeWindow = iWindowLengthY
         
-        self.SetHyperparameters()
+        self.oOptimizer = oOptimizer
+        self.fncLoss = fncLoss
         
-    
-    def SetHyperparameters(self,epoch_size = 120, batch_size = 512, iNumberOfHiddenNeurons = None, fDropoutRateEncoder = 0.0,fDropoutRateDecoder=0.0, fRecurrentDropoutRateEncoder = 0.0, fRecurrentDropoutRateDecoder=0.0, learning_rate = 0.0001, momentum_rate=0.9):
-        self.epoch_size = epoch_size
-        self.batch_size = batch_size
-        
-        if iNumberOfHiddenNeurons is None:
-            iNumberOfHiddenNeurons = self.feature_size_input*self.iBackwardTimeWindow*2
-            
+        self.iEpochSize = iEpochSize
+        self.iBatchSize = iBatchSize
         self.iNumberOfHiddenNeurons = iNumberOfHiddenNeurons
-        self.fDropoutRateEncoder = fDropoutRateEncoder
-        self.fDropoutRateDecoder = fDropoutRateDecoder
-        self.fRecurrentDropoutRateEncoder = fRecurrentDropoutRateEncoder
-        self.fRecurrentDropoutRateDecoder = fRecurrentDropoutRateDecoder
-        self.learning_rate = learning_rate
-        self.momentum_rate = momentum_rate
-        
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate= self.learning_rate, beta_1=self.momentum_rate)
-    
-        # self.optimizer = tf.keras.optimizers.SGD(learning_rate= 0.01, clipvalue=0.5)
-    
-        self.loss_function = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        
-        self.oKernelRegulizer = tf.keras.regularizers.l1(0.0001)
-        
-        self.encoder = Encoder(self.feature_size_input, self.iNumberOfHiddenNeurons, self.batch_size, self.fDropoutRateEncoder, self.fRecurrentDropoutRateEncoder, self.oKernelRegulizer)
-        self.decoder = Decoder(self.feature_size_target, self.iNumberOfHiddenNeurons, self.batch_size, self.fDropoutRateDecoder, self.fRecurrentDropoutRateDecoder, self.oKernelRegulizer)
+
+        self.oEncoder = Encoder(self.iFeatureSizeX, self.iNumberOfHiddenNeurons, self.iBatchSize)
+        self.oDecoder = Decoder(self.iFeatureSizeY, self.iNumberOfHiddenNeurons, self.iBatchSize)
     
     
     @tf.function
-    def TrainStep(self, inp, targ, enc_hidden):        
-        loss = 0.0
+    def TrainStep(self, aInput, aTarget, aEncoderHidden):        
+        fLoss = 0.0
         with tf.GradientTape() as tape:            
-            enc_output, enc_hidden = self.encoder(inp, enc_hidden)
-            dec_hidden = enc_hidden            
+            aEncoderOutput, aEncoderHidden = self.oEncoder(aInput, aEncoderHidden)
+            aDecoderHidden = aEncoderHidden            
             # start one-hot vector is the one hot vector of t.
             # dec_input = tf.expand_dims(targ[:, 0], 1) 
-            dec_input = tf.expand_dims(np.zeros((self.batch_size,self.feature_size_target)) , 1)
+            aDecoderInput = tf.expand_dims(np.zeros((self.iBatchSize,self.iFeatureSizeY)) , 1)
             # Teacher forcing - feeding the target as the next input
             for t in range(0, self.iForwardTimeWindow):
-                # passing enc_output to the decoder
-                predictions, dec_hidden, _ = self.decoder(dec_input, dec_hidden, enc_output)  
+                predictions, aDecoderHidden, _ = self.oDecoder(aDecoderInput, aDecoderHidden, aEncoderOutput)  
                             
-                loss += self.loss_function(targ[:, t], predictions)
+                fLoss += self.fncLoss(aTarget[:, t], predictions)
                 # using teacher forcing
-                dec_input = tf.expand_dims(targ[:, t], 1)
+                aDecoderInput = tf.expand_dims(aTarget[:, t], 1)
           
 
-        variables = self.encoder.trainable_variables + self.decoder.trainable_variables
-        gradients = tape.gradient(loss, variables)
-        self.optimizer.apply_gradients(zip(gradients, variables))
+        aVariables = self.oEncoder.trainable_variables + self.oDecoder.trainable_variables
+        aGradients = tape.gradient(fLoss, aVariables)
+        self.oOptimizer.apply_gradients(zip(aGradients, aVariables))
         
     
 
-    def dicGetMetricsAndLosses(self, aScaledInputTrain, aScaledOutputTrain, aScaledInputValidation, aScaledOutputValidation):
-        aPredictionsValidation, aPredicitonsValidationOneHot = self.aPredict(aScaledInputValidation)
-        aPredictionsTrain, aPredicitonsTrainOneHot = self.aPredict(aScaledInputTrain)
-           
-        decValidationLoss = decValidationAccuracy = decValidationPrecision = decValidationRecall = decValidationF1Score = 0.0            
-        decTrainingLoss = decTrainingAccuracy = decTrainingPrecision = decTrainingRecall =  decTrainingF1Score = 0.0
+    def dicGetMetricsAndLosses(self, aInputTrain, aOutputTrain, aInputValidation, aOutputValidation):
+        aPredictionsTrain= self.aPredict(aInputTrain)
+        aPredictionsValidation= self.aPredict(aInputValidation)
+        fValidationLoss = 0.0            
+        fTrainingLoss = 0.0
 
         
         for t in range(0, self.iForwardTimeWindow):
-            aPredictionValidationTimeStep = aPredictionsValidation[:, t*self.feature_size_target:(t+1)*self.feature_size_target]
-            aPredictionValidationOneHotTimeStep = aPredicitonsValidationOneHot[:, t*self.feature_size_target:(t+1)*self.feature_size_target]
-            aActualValidationTimeStep = aScaledOutputValidation[:, t*self.feature_size_target:(t+1)*self.feature_size_target]
+            aPredictionValidationTimeStep = aPredictionsValidation[:, t*self.iFeatureSizeY:(t+1)*self.iFeatureSizeY]
+            aActualValidationTimeStep = aOutputValidation[:, t*self.iFeatureSizeY:(t+1)*self.iFeatureSizeY]
             
-            aActualTrainTimeStep = aScaledOutputTrain[:, t*self.feature_size_target:(t+1)*self.feature_size_target]
-            aPredictionTrainTimeStep = aPredictionsTrain[:, t*self.feature_size_target:(t+1)*self.feature_size_target]
-            aPredictionTrainOneHotTimeStep = aPredicitonsTrainOneHot[:, t*self.feature_size_target:(t+1)*self.feature_size_target]
+            aActualTrainTimeStep = aOutputTrain[:, t*self.iFeatureSizeY:(t+1)*self.iFeatureSizeY]
+            aPredictionTrainTimeStep = aPredictionsTrain[:, t*self.iFeatureSizeY:(t+1)*self.iFeatureSizeY]
+
+            fValidationLoss += self.fncLoss(aActualValidationTimeStep, aPredictionValidationTimeStep)
             
-
-            decValidationAccuracy +=  metrics.accuracy_score(aActualValidationTimeStep, aPredictionValidationOneHotTimeStep)
-            decValidationPrecision += metrics.precision_score(aActualValidationTimeStep, aPredictionValidationOneHotTimeStep, zero_division=0, average='micro')
-            decValidationRecall += metrics.recall_score(aActualValidationTimeStep, aPredictionValidationOneHotTimeStep, zero_division=0, average='micro')
-            decValidationF1Score += metrics.f1_score(aActualValidationTimeStep, aPredictionValidationOneHotTimeStep, zero_division=0, average='micro')
-            decValidationLoss += self.loss_function(aActualValidationTimeStep, aPredictionValidationTimeStep)
-            
-
-            decTrainingAccuracy += metrics.accuracy_score(aActualTrainTimeStep, aPredictionTrainOneHotTimeStep)
-            decTrainingPrecision += metrics.precision_score(aActualTrainTimeStep, aPredictionTrainOneHotTimeStep, zero_division=0, average='micro')
-            decTrainingRecall += metrics.recall_score(aActualTrainTimeStep, aPredictionTrainOneHotTimeStep, zero_division=0, average='micro')
-            decTrainingF1Score +=  metrics.f1_score(aActualTrainTimeStep, aPredictionTrainOneHotTimeStep, zero_division=0, average='micro')
-            decTrainingLoss += self.loss_function(aActualTrainTimeStep, aPredictionTrainTimeStep)             
-
         
+        fValidationLoss = fValidationLoss/self.iForwardTimeWindow
+        fTrainingLoss = fTrainingLoss/self.iForwardTimeWindow
         
-        decValidationAccuracy = decValidationAccuracy/self.iForwardTimeWindow
-        decValidationPrecision = decValidationPrecision/self.iForwardTimeWindow
-        decValidationRecall = decValidationRecall/self.iForwardTimeWindow
-        decValidationF1Score = decValidationF1Score/self.iForwardTimeWindow
-        decValidationLoss = decValidationLoss/self.iForwardTimeWindow
-        
-        
-        decTrainingAccuracy = decTrainingAccuracy/self.iForwardTimeWindow
-        decTrainingPrecision = decTrainingPrecision/self.iForwardTimeWindow
-        decTrainingRecall = decTrainingRecall/self.iForwardTimeWindow
-        decTrainingF1Score = decTrainingF1Score/self.iForwardTimeWindow
-        decTrainingLoss = decTrainingLoss/self.iForwardTimeWindow
-        
-        
-        decTrainingLoss = decTrainingLoss.numpy()
-        decValidationLoss = decValidationLoss.numpy()
+        fTrainingLoss = fTrainingLoss
+        fValidationLoss = fValidationLoss
         
         dicHistory = {
-                'training loss':[decTrainingLoss], 
-                'validation loss': [decValidationLoss],
-                'training accuracy': [decTrainingAccuracy],
-                'validation accuracy': [decValidationAccuracy],
-                'training precision': [decTrainingPrecision],
-                'validation precision': [decValidationPrecision],
-                'training recall': [decTrainingRecall],
-                'validation recall': [decValidationRecall],
-                'training f1-score': [decTrainingF1Score],
-                'validation f1-score': [decValidationF1Score]
+                'training loss':[fTrainingLoss], 
+                'validation loss': [fValidationLoss]
                 }
         
         return dicHistory
         
     
-    def Train(self, aScaledInputTrain, aScaledOutputTrain, aScaledInputValidation, aScaledOutputValidation):        
-        checkpoint_dir = os.path.join(self.model_id, "__Training checkpoints__")
-        checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+    def Fit(self, aInputTrain, aOutputTrain, aInputValidation, aOutputValidation):        
+        sCheckpointDirectory = os.path.join(self.sModelId, "__Training checkpoints__")
+        sCheckpointPrefix = os.path.join(sCheckpointDirectory, "ckpt")
         
+        oCheckPoint = tf.train.Checkpoint(optimizer=self.oOptimizer,encoder=self.oEncoder,decoder=self.oDecoder)
         
-        oCheckPoint = tf.train.Checkpoint(optimizer=self.optimizer,encoder=self.encoder,decoder=self.decoder)
-        
-        steps_per_epoch = len(aScaledInputTrain)//self.batch_size
-        buffer_size = len(aScaledInputTrain)
-        
-        dataset = (tf.data.Dataset.from_tensor_slices((aScaledInputTrain,aScaledOutputTrain)))
-        dataset = dataset.shuffle(buffer_size)
-        dataset = dataset.batch(self.batch_size, drop_remainder=True)
+        iStepsPerEpoch = len(aInputTrain)//self.iBatchSize
+
+        dsTrain = (tf.data.Dataset.from_tensor_slices((aInputTrain,aOutputTrain)))
+        dsTrain = dsTrain.batch(self.iBatchSize, drop_remainder=True)
         
         dfHistory = pd.DataFrame()
         
-        for epoch in range(self.epoch_size):
-            encoder_hidden = self.encoder.initialize_hidden_state()
-
-                    
-            for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):
-                inp = tf.reshape(inp, (self.batch_size, self.iBackwardTimeWindow, self.feature_size_input, 1))
-                targ = tf.reshape(targ, (self.batch_size, self.iForwardTimeWindow, self.feature_size_target, 1 )) #since forward window length includes also t.
+        for iEpoch in range(self.iEpochSize):
+            aEncoderHidden = self.oEncoder.aInitializeHiddenState()
+     
+            for (iBatch, (aInput, aTarget)) in enumerate(dsTrain.take(iStepsPerEpoch)):
+                tf.print("epoch nr: "+ str(iEpoch) + " batch nr: "+ str(iBatch))
+                aInput = tf.reshape(aInput, (self.iBatchSize, self.iBackwardTimeWindow, self.iFeatureSizeX, 1))
+                aTarget = tf.reshape(aTarget, (self.iBatchSize, self.iForwardTimeWindow, self.iFeatureSizeY, 1 )) #since forward window length includes also t.
                 
-                inp = tf.reshape(inp, (self.batch_size, self.iBackwardTimeWindow, self.feature_size_input))
-                targ = tf.reshape(targ, (self.batch_size, self.iForwardTimeWindow,self.feature_size_target))
+                aInput = tf.reshape(aInput, (self.iBatchSize, self.iBackwardTimeWindow, self.iFeatureSizeX))
+                aTarget = tf.reshape(aTarget, (self.iBatchSize, self.iForwardTimeWindow,self.iFeatureSizeY))
                 
-                self.TrainStep(inp, targ, encoder_hidden)
+                self.TrainStep(aInput, aTarget, aEncoderHidden)
                 
                 
-            if (epoch + 1) % 2 == 0 or epoch == 0:
-                oCheckPoint.write(file_prefix = checkpoint_prefix)
+            if (iEpoch + 1) % 2 == 0 or iEpoch == 0:
+                oCheckPoint.write(file_prefix = sCheckpointPrefix)
  
-            oCheckPoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+            oCheckPoint.restore(tf.train.latest_checkpoint(sCheckpointDirectory))
         
-            self.save_weights(self.model_directory)
+            self.save_weights(self.sModelDirectory)
             
-            dicHistory = self.dicGetMetricsAndLosses(aScaledInputTrain, aScaledOutputTrain, aScaledInputValidation, aScaledOutputValidation)
+            dicHistory = self.dicGetMetricsAndLosses(
+                aInputTrain, 
+                aOutputTrain, 
+                aInputValidation, 
+                aOutputValidation
+            )
             
             dfHistory = dfHistory.append(
                 pd.DataFrame(
-                    dicHistory, index = [epoch])
+                    dicHistory, index = [iEpoch])
                 )
             
         dfHistory.columns = pd.MultiIndex.from_product([['history'], dfHistory.columns])
         self.history = dfHistory
         
-        self.save_weights(self.model_directory)
+        self.save_weights(self.sModelDirectory)
         
     
     
     def aPredict(self, aInput) :
-        self.load_weights(self.model_directory)
+        self.load_weights(self.sModelDirectory)
         
         iBatchSize = len(aInput)
         
-        dataset_test = (tf.data.Dataset.from_tensor_slices((aInput)))
+        dsTest = (tf.data.Dataset.from_tensor_slices((aInput)))
         
-        dataset_test = dataset_test.batch(iBatchSize, drop_remainder=True)
+        dsTest = dsTest.batch(iBatchSize, drop_remainder=True)
         
-        encoder_hidden = tf.zeros((iBatchSize, self.iNumberOfHiddenNeurons))
+        aEncoderHidden = tf.zeros((iBatchSize, self.iNumberOfHiddenNeurons))
     
-        aPredictionsProb = tf.zeros(1)
-        aPredictionsOneHot =  tf.zeros(1)
-        for (batch, (inp_test)) in enumerate(dataset_test.take(-1)):
-            inp_test = tf.reshape(inp_test, (iBatchSize, self.iBackwardTimeWindow, self.feature_size_input, 1))
-            inp_test = tf.reshape(inp_test, (iBatchSize, self.iBackwardTimeWindow, self.feature_size_input))
+        aPredictions = tf.zeros(1)
+        for (iBatch, (aInputTest)) in enumerate(dsTest.take(-1)):
+            aInputTest = tf.reshape(aInputTest, (iBatchSize, self.iBackwardTimeWindow, self.iFeatureSizeX, 1))
+            aInputTest = tf.reshape(aInputTest, (iBatchSize, self.iBackwardTimeWindow, self.iFeatureSizeX))
     
-            encoder_output, encoder_hidden = self.encoder(inp_test, encoder_hidden)
+            aEncoderOutput, aEncoderHidden = self.oEncoder(aInputTest, aEncoderHidden)
             
-            decoder_hidden = encoder_hidden
+            aDecoderHidden = aEncoderHidden
             
-            decoder_input = tf.expand_dims(np.zeros((iBatchSize,self.feature_size_target)) , 1)
+            aDecoderInput = tf.expand_dims(np.zeros((iBatchSize,self.iFeatureSizeY)) , 1)
             
-            pProb = tf.zeros(1)
-            pOneHot = tf.zeros(1)
+            aTimeStepPredictions = tf.zeros(1)
             for t in range(0, self.iForwardTimeWindow):
-                pred, dec_hidden, _, aPredOneHot = self.decoder(decoder_input, decoder_hidden, encoder_output ,True) # passing enc_output to the decoder
-                
-                decoder_input = tf.expand_dims(aPredOneHot, 1)
+                aPred, dec_hidden, _ = self.oDecoder(aDecoderInput, aDecoderHidden, aEncoderOutput) # passing enc_output to the decoder
+                aDecoderInput = tf.expand_dims(aPred, 1)
                 
                 if t == 0:
-                    pProb = pred
-                    pOneHot = aPredOneHot
+                    aTimeStepPredictions = aPred
                 else:
-                    pProb = tf.concat([pProb, pred],1)
-                    pOneHot = tf.concat([pOneHot, aPredOneHot],1)
-
+                    aTimeStepPredictions = tf.concat([aTimeStepPredictions, aPred],1)
             
-            aPredictionsProb = pProb
-            aPredictionsOneHot = pOneHot
+            aPredictions = aTimeStepPredictions
         
-        aPredictionsProb = aPredictionsProb.numpy()
-        aPredictionsOneHot = aPredictionsOneHot.numpy()
+        aPredictions = aPredictions.numpy()
         
-        return aPredictionsProb, aPredictionsOneHot
+        return aPredictions
