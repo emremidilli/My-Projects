@@ -1,2 +1,2 @@
-model_checkpoint_path: "MLP_3_3_90_102"
-all_model_checkpoint_paths: "MLP_3_3_90_102"
+model_checkpoint_path: "MLP_3_3_90_197"
+all_model_checkpoint_paths: "MLP_3_3_90_197"
