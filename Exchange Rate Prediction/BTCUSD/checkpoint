@@ -1,2 +1,2 @@
-model_checkpoint_path: "__deep learning model__"
-all_model_checkpoint_paths: "__deep learning model__"
+model_checkpoint_path: "MLP_3_3_90_102"
+all_model_checkpoint_paths: "MLP_3_3_90_102"
