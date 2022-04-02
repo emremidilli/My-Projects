@@ -9,10 +9,10 @@ def __init__(sOutputSymbol, sModelType):
     sOutputSymbol = sOutputSymbol
     sModelType = sModelType
     
-    c_iNrOfReplicate = 4
+    c_iNrOfReplicate = 1
     dicFactors = {
-            'Batch Size':[32, 256],
-            'Number of Hidden Neurons':[50, 250]
+            'Batch Size':[32, 64],
+            'Number of Hidden Neurons':[20, 30]
         }
     
     

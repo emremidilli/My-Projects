@@ -1,7 +1,0 @@
-Performance,Value
-Regression Score,0.34708842923168726
-Feature Names,"['Batch Size' 'Number of Hidden Neurons' 'Batch Size^2'
- 'Batch Size Number of Hidden Neurons' 'Number of Hidden Neurons^2']"
-Intercept,-3773135.7452326096
-Coefficients,"[ 7.25663872e+03  5.69124834e+04  1.88385552e+01 -9.35106455e+01
- -1.92689884e+02]"

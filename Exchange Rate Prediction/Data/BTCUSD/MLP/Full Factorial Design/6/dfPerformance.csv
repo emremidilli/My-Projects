@@ -1,6 +1,6 @@
 ,value
-training duration,32.29286217689514
-mean absolute error,383.2734432752915
-mean squared error,262228.615948708
-r2 score,0.9634781222638752
-custom_metric,570462.882808066
+training duration,27.69878602027893
+mean absolute error,0.0
+mean squared error,0.00012239611363221124
+r2 score,-1.1508099174178665
+custom_metric,58.19174336302321

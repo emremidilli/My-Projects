@@ -21,7 +21,9 @@ def __init__(sOutputSymbol,sModelType ):
     iNumberOfHiddenNeuronsLower  = int(iNumberOfHiddenNeuronsCenter - (iNumberOfHiddenNeuronsCenter * fDelta))
     iNumberOfHiddenNeuronsUpper  = int(iNumberOfHiddenNeuronsCenter + (iNumberOfHiddenNeuronsCenter * fDelta))
     
+    
     # CENTRAL COMPOSITE DESIGN
+    
     dicFactors = {
         'Batch Size':[iBatchSizeLower,iBatchSizeUpper ],
         'Number of Hidden Neurons':[iNumberOfHiddenNeuronsLower,iNumberOfHiddenNeuronsUpper ]

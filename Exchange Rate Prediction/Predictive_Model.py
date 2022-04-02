@@ -23,9 +23,31 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping
 
+import random as rn
+
 
 
 def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
+    
+    #-----------------------------Keras reproducible------------------#
+    SEED = 1234
+
+    tf.random.set_seed(SEED)
+    os.environ['PYTHONHASHSEED'] = str(SEED)
+    np.random.seed(SEED)
+    rn.seed(SEED)
+    
+    session_conf = tf.compat.v1.ConfigProto(
+        intra_op_parallelism_threads=1, 
+        inter_op_parallelism_threads=1
+    )
+    sess = tf.compat.v1.Session(
+        graph=tf.compat.v1.get_default_graph(), 
+        config=session_conf
+    )
+    tf.compat.v1.keras.backend.set_session(sess)
+    #-----------------------------------------------------------------#
+    
     
     # CONFIGURATION
     sOutputSymbol = sOutputSymbol
@@ -185,6 +207,9 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     # MODEL DEVELOPMENT
     
     ## Set Early Stopping
+
+ 
+    
     oEarlyStop = EarlyStopping(
         monitor = 'val_loss', 
         mode = 'min', 
@@ -225,27 +250,26 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     if sModelType == 'MLP':
         aInputMlp = keras.Input(
             shape=(iBackwardTimeWindow, iNrInputFeatures))
-
+    
         aW = keras.layers.Flatten()(aInputMlp)
         aW = keras.layers.Dense(iNrOfHiddenNeurons)(aW)
         aW = keras.layers.Dense(iForwardTimeWindow*iNrOutputFeatures)(aW)
         aW = keras.layers.Reshape((iForwardTimeWindow, iNrOutputFeatures))(aW)
-
+    
         aOutputMlp = aW
         oModelMlp = keras.Model(
             inputs=aInputMlp,
             outputs=aOutputMlp
         )
-
+    
         oOptimizerMlp = tf.keras.optimizers.Adam(learning_rate=1e-04)
         oModelMlp.compile(optimizer=oOptimizerMlp,
                                  loss = fCalculateLoss
                                 )
-
+    
         oPredictiveModel = oModelMlp
-
+    
         tf.keras.utils.plot_model(oModelMlp,  show_shapes=True, to_file=sModelName +'\Model architecture.png')
-
 
     ## Fit Model
     iEpochSize = 10000
