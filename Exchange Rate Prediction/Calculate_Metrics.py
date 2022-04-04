@@ -65,8 +65,3 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     dfPerformance.drop(dfMetrics.index, axis = 0, inplace = True, errors = 'ignore')
     dfPerformance.append(dfMetrics).to_csv(sModelName+'\dfPerformance.csv')
     
-    
-    
-    
-    
-    

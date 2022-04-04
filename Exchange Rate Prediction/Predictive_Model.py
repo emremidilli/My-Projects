@@ -23,30 +23,28 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping
 
-import random as rn
-
 
 
 def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     
-    #-----------------------------Keras reproducible------------------#
-    SEED = 1234
+    # #-----------------------------Keras reproducible------------------#
+    # SEED = 1234
 
-    tf.random.set_seed(SEED)
-    os.environ['PYTHONHASHSEED'] = str(SEED)
-    np.random.seed(SEED)
-    rn.seed(SEED)
+    # tf.random.set_seed(SEED)
+    # os.environ['PYTHONHASHSEED'] = str(SEED)
+    # np.random.seed(SEED)
+    # random.seed(SEED)
     
-    session_conf = tf.compat.v1.ConfigProto(
-        intra_op_parallelism_threads=1, 
-        inter_op_parallelism_threads=1
-    )
-    sess = tf.compat.v1.Session(
-        graph=tf.compat.v1.get_default_graph(), 
-        config=session_conf
-    )
-    tf.compat.v1.keras.backend.set_session(sess)
-    #-----------------------------------------------------------------#
+    # session_conf = tf.compat.v1.ConfigProto(
+    #     intra_op_parallelism_threads=1, 
+    #     inter_op_parallelism_threads=1
+    # )
+    # sess = tf.compat.v1.Session(
+    #     graph=tf.compat.v1.get_default_graph(), 
+    #     config=session_conf
+    # )
+    # tf.compat.v1.keras.backend.set_session(sess)
+    # #-----------------------------------------------------------------#
     
     
     # CONFIGURATION
@@ -60,7 +58,7 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     iBatchSize = dfDesign.loc[iTrialId, 'Batch Size']
     iNrOfHiddenNeurons = dfDesign.loc[iTrialId, 'Number of Hidden Neurons']
     iBackwardTimeWindow = 3
-    iForwardTimeWindow = 3
+    iForwardTimeWindow =3
 
     sModelName = os.path.join(sFolderPath + str(iTrialId))
 
@@ -207,8 +205,6 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     # MODEL DEVELOPMENT
     
     ## Set Early Stopping
-
- 
     
     oEarlyStop = EarlyStopping(
         monitor = 'val_loss', 
@@ -290,10 +286,8 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
 
 
     ## Save Epoch History
-    plt.figure(figsize = (20,10))
+
     dfHistory = pd.DataFrame(oPredictiveModel.history.history)
-    oFig = sns.lineplot(data = dfHistory)
-    oFig.get_figure().savefig(sModelName + '\epochs.png')
     dfHistory.to_csv(sModelName + '\dfHistory.csv')
 
 
