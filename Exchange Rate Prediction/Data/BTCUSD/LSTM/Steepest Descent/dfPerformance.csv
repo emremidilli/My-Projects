@@ -1,0 +1,4 @@
+Score,Value
+Regression Score,0.0679653081720506
+Coefficients,"[0.20130895997585802, 3.152935018314717]"
+Feature Names,"['Batch Size', 'Number of Hidden Neurons']"

@@ -12,10 +12,6 @@ import pickle
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
-import seaborn as sns
-
-import matplotlib.pyplot as plt
-
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -48,11 +44,6 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     
     
     # CONFIGURATION
-    sOutputSymbol = sOutputSymbol
-    sModelType = sModelType
-    sDesignType = sDesignType
-    iTrialId = iTrialId
-
     sFolderPath = 'Data/'+ sOutputSymbol +'//'+ sModelType + '//'+ sDesignType+ '//'
     dfDesign = pd.read_csv(sFolderPath + 'Design.csv', index_col = 'Run ID')
     iBatchSize = dfDesign.loc[iTrialId, 'Batch Size']
@@ -249,6 +240,8 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     
         aW = keras.layers.Flatten()(aInputMlp)
         aW = keras.layers.Dense(iNrOfHiddenNeurons)(aW)
+        aW = keras.layers.Dropout(0.1)(aW)
+        
         aW = keras.layers.Dense(iForwardTimeWindow*iNrOutputFeatures)(aW)
         aW = keras.layers.Reshape((iForwardTimeWindow, iNrOutputFeatures))(aW)
     
@@ -265,8 +258,114 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     
         oPredictiveModel = oModelMlp
     
-        tf.keras.utils.plot_model(oModelMlp,  show_shapes=True, to_file=sModelName +'\Model architecture.png')
 
+    elif sModelType == 'LSTM':
+        aInputDeepLstm = keras.Input(
+            shape=(iBackwardTimeWindow, iNrInputFeatures))
+    
+        aW = keras.layers.LSTM(iNrOfHiddenNeurons, return_sequences = True)(aInputDeepLstm)
+        aW = keras.layers.Flatten()(aW)
+        aW = keras.layers.Dense(iForwardTimeWindow*iNrOutputFeatures)(aW)
+        aW = keras.layers.Reshape((iForwardTimeWindow, iNrOutputFeatures))(aW)
+    
+        aOutputDeepLstm = aW
+        oModelDeepLstm = keras.Model(
+            inputs=aInputDeepLstm,
+            outputs=aOutputDeepLstm
+        )
+    
+        oOptimizerDeepLstm = tf.keras.optimizers.Adam(learning_rate=1e-04)
+        oModelDeepLstm.compile(optimizer=oOptimizerDeepLstm,
+                                 loss = fCalculateLoss
+                                )
+    
+        oPredictiveModel = oModelDeepLstm
+    
+
+    
+    elif sModelType == 'Convolutional Encoder Decoder':
+        aInputs = keras.Input(
+            shape=(iBackwardTimeWindow, iNrInputFeatures))
+    
+        aEncoderHiddens, aFinalH, aFinalC = keras.layers.LSTM(iNrOfHiddenNeurons,
+                                                 return_state = True, 
+                                                 return_sequences = True
+                                                )(aInputs)
+        aFinalH = keras.layers.BatchNormalization()(aFinalH)
+        aFinalC = keras.layers.BatchNormalization()(aFinalC)
+    
+        aFeatureMap = keras.layers.Conv1D(64, 2)(aEncoderHiddens)
+        aFeatureMap = keras.layers.MaxPooling1D(2)(aFeatureMap)
+        aFlatted = keras.layers.Flatten()(aFeatureMap)
+    
+        aDecoderInputs = keras.layers.RepeatVector(iForwardTimeWindow)(aFlatted)
+    
+        aDecoderHiddens = keras.layers.LSTM(iNrOfHiddenNeurons, 
+                               return_state = False, 
+                               return_sequences = True
+                              )(aDecoderInputs, initial_state=[aFinalH, aFinalC])
+        
+
+        aOutputs = keras.layers.TimeDistributed(
+            keras.layers.Dense(iNrOutputFeatures)
+        )(aDecoderHiddens)
+    
+        oPredictiveModel = keras.Model(
+            inputs=aInputs,
+            outputs=aOutputs
+        )
+    
+        oOptimizer = tf.keras.optimizers.Adam(learning_rate=1e-05)
+        oPredictiveModel.compile(loss = fCalculateLoss,
+                                 optimizer=oOptimizer
+                                )
+        
+        
+
+
+    if sModelType == 'Luongs Attention':
+        aEncoderInputs = keras.Input(
+            shape=(iBackwardTimeWindow, iNrInputFeatures))
+    
+        aEncoderHiddens, aFinalH, aFinalC = keras.layers.LSTM(iNrOfHiddenNeurons,
+                                                 return_state = True, 
+                                                 return_sequences = True
+                                                )(aEncoderInputs)
+        aFinalH = keras.layers.BatchNormalization()(aFinalH)
+        aFinalC = keras.layers.BatchNormalization()(aFinalC)
+    
+        aDecoderInputs = keras.layers.RepeatVector(iForwardTimeWindow)(aFinalH)
+    
+        aDecoderHiddens = keras.layers.LSTM(iNrOfHiddenNeurons, 
+                               return_state = False, 
+                               return_sequences = True
+                              )(aDecoderInputs, initial_state=[aFinalH, aFinalC])
+    
+        aAttentions = keras.layers.dot([aDecoderHiddens, aEncoderHiddens], axes=[2, 2])
+        aAttentions = keras.layers.Activation('softmax')(aAttentions)
+    
+        aContextVector = keras.layers.dot([aAttentions, aEncoderHiddens], axes=[2,1])
+        aContextVector = keras.layers.BatchNormalization()(aContextVector)
+        aContextVector = keras.layers.concatenate([aContextVector, aDecoderHiddens])
+    
+        aDecoderOutputs = keras.layers.TimeDistributed(
+            keras.layers.Dense(iNrOutputFeatures)
+        )(aContextVector)
+    
+        oPredictiveModel = keras.Model(
+            inputs=aEncoderInputs,
+            outputs=aDecoderOutputs
+        )
+    
+        oOptimizer = tf.keras.optimizers.Adam(learning_rate=1e-05)
+        oPredictiveModel.compile(loss = fCalculateLoss, 
+                                 optimizer=oOptimizer
+                                )
+    
+    
+    ## Plot Model Architecutre
+    tf.keras.utils.plot_model(oPredictiveModel,  show_shapes=True, to_file = sFolderPath +'\Model architecture.png')    
+    
     ## Fit Model
     iEpochSize = 10000
     dtStartTime = time.time()

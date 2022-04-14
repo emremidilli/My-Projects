@@ -48,7 +48,8 @@ class PortfolioManagement():
                     "k":aK,
                     }        
         
-        dfIndices = pd.DataFrame(data=dicIndices)    
+        
+        dfIndices = pd.DataFrame(data=dicIndices)
         
         return dfIndices        
 
@@ -71,7 +72,7 @@ class PortfolioManagement():
        
         
        
-    def dfGetDecisionVariables(self, sVariableLetter = "x",):
+    def dfGetDecisionVariables(self, sVariableLetter = "x"):
         aTypes = []
         aLabels = []
         aLowerBounds = []
@@ -263,9 +264,6 @@ class PortfolioManagement():
 
 
 
-
-
-
     def EnsureNonNegativeBalances(self, aIndividualX, aIndividualY):
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)
@@ -376,7 +374,6 @@ class variable_types(enum.Enum):
             return random.randint(vMin, vMax)
         elif eType == variable_types.decimal:
             return random.uniform(vMin, vMax)
-
 
 
 class GeneticAlgorithm():
@@ -538,7 +535,6 @@ class GeneticAlgorithm():
         ResultLogs.LogToOutputFile(oOutputFile, "OPTIMUM RESULT", "", aBestIndFull, aBestIndX.fitness.values)
                 
         return aBestIndFull
-
 
 
 class ParticleSwarmOptimization():
@@ -730,9 +726,6 @@ class ParticleSwarmOptimization():
                                 
         return oParticleGlobalBest
     
-
-
-
 
 class ResultLogs():
     def OpenOutputFile(aDecisionVariableLabels,aFitnessLabels):

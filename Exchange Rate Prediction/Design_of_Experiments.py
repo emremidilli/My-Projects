@@ -36,7 +36,7 @@ class Full_Factorial_Design():
         
         dfDesign = pd.DataFrame()
         for i in range(1, c_iNrOfReplicate+1):
-            dfDesign = dfDesign.append(build.full_fact(dicFactors).astype(np.int))
+            dfDesign = dfDesign.append(build.full_fact(dicFactors).astype(int))
         
         dfDesign = shuffle(dfDesign)
         dfDesign = dfDesign.reset_index().drop(['index'], axis = 1)
@@ -98,7 +98,7 @@ class Steepest_Descent_Process():
         while (True):
             
             aNewDesign = aCenterValues + (iIteration * aRatiosToDecrease * aStepSizes)
-            aNewDesign = aNewDesign.astype(np.int)
+            aNewDesign = aNewDesign.astype(int)
         
             dfIteration = pd.DataFrame(data =np.reshape(aNewDesign, (1,-1)), columns = dfFullFactorialExperiments.iloc[:, :-1].columns, index = [iIteration])
             dfIteration.index.name = 'Run ID'
@@ -132,7 +132,7 @@ class Steepest_Descent_Process():
         
             iIteration = iIteration + 1
         
-      
+ 
 class Central_Composite_Design():
     
     def __init__(sOutputSymbol,sModelType ):    
@@ -148,7 +148,6 @@ class Central_Composite_Design():
         dfSteepestDescentExperiments = pd.read_csv( sFolderPath + '\Steepest Descent\Experiments.csv', index_col = 'Run ID')
         dfFirstCurvature = dfSteepestDescentExperiments.iloc[-2, :-1]
         
-        
         # CENTRAL COMPOSITE DESIGN
         dfUpperLevel = (dfFirstCurvature  + aStepSizes).to_frame().transpose()
         dfLowerLevel = (dfFirstCurvature  - aStepSizes).to_frame().transpose()
@@ -160,7 +159,7 @@ class Central_Composite_Design():
         for sFactor in dfNewFactors.columns:
             dicFactors[sFactor] = list(dfNewFactors[sFactor].values)
         
-        dfDesign = build.central_composite(dicFactors, face='cci').astype(np.int)
+        dfDesign = build.central_composite(dicFactors, center=(4, 4), alpha = 'r' ,face='cci').astype(int)
         
         dfDesign = dfDesign.reset_index().drop(['index'], axis = 1)
         

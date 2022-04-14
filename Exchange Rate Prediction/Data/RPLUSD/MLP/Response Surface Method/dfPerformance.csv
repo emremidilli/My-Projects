@@ -1,8 +1,8 @@
 Performance,Value
-Regression Score,0.3627674111708672
+Regression Score,0.3300932742361081
 Feature Names,"['Batch Size', 'Number of Hidden Neurons', 'Batch Size^2', 'Batch Size Number of Hidden Neurons', 'Number of Hidden Neurons^2']"
-Intercept,1547.850227959637
-Coefficients,"[-23.25673596221306, -127.91002137124501, 0.06570982438054784, 1.2715310328570464, 2.0801079515492638]"
+Intercept,-1102.83632178128
+Coefficients,"[39.50523143743598, -17.447877752513673, -0.3226070106920673, 0.09634042514565899, 0.7317186844337416]"
 Hyperparameter Names,"['Batch Size', 'Number of Hidden Neurons']"
-Optimum Hyperparameters,"[69.0, 10.0]"
-Optimum Response,62.246914556562615
+Optimum Hyperparameters,"[67.0, 8.0]"
+Optimum Response,54.716755191963784
