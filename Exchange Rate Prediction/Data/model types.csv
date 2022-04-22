@@ -1,5 +1,5 @@
 ﻿Model Type
 MLP
 LSTM
-Convolutional Encoder Decoder
-Luongs Attention
+Conv-EncDec
+Luongs-Att

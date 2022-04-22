@@ -9,27 +9,35 @@ import pandas as pd
 aOutputSymbols  = pd.read_csv('Data/cryptocurrencies.csv')['Symbol'].values
 for sOutputSymbol in aOutputSymbols:
 
-    sModelType = 'Luongs Attention'
+    # sModelType = 'MLP'
     
-    dfFullFactorialDesign = Full_Factorial_Design.__init__(sOutputSymbol,sModelType)
+    for sModelType in ['LSTM', 'Conv-EncDec', 'Luongs-Att']:
+        
     
-    for iTrialId, _ in dfFullFactorialDesign.iterrows():
-        Predictive_Model.__init__(sOutputSymbol, sModelType, 'Full Factorial Design', iTrialId)
-        Calculate_Metrics.__init__(sOutputSymbol, sModelType, 'Full Factorial Design', iTrialId)
+    # dfFullFactorialDesign = Full_Factorial_Design.__init__(sOutputSymbol,sModelType)
     
-    Compile_Responses.__init__(sOutputSymbol, sModelType, 'Full Factorial Design')
+    # for iTrialId, _ in dfFullFactorialDesign.iterrows():
+    #     Predictive_Model.__init__(sOutputSymbol, sModelType, 'Full Factorial Design', iTrialId)
+    #     Calculate_Metrics.__init__(sOutputSymbol, sModelType, 'Full Factorial Design', iTrialId)
     
-    Steepest_Descent_Process.__init__(sOutputSymbol, sModelType)
+    # Compile_Responses.__init__(sOutputSymbol, sModelType, 'Full Factorial Design')
     
-    dfCentralCompositeDesign = Central_Composite_Design.__init__(sOutputSymbol, sModelType)
+    # Steepest_Descent_Process.__init__(sOutputSymbol, sModelType)
     
-    for iTrialId, _ in dfCentralCompositeDesign.iterrows():
-        Predictive_Model.__init__(sOutputSymbol, sModelType, 'Central Composite Design', iTrialId)
-        Calculate_Metrics.__init__(sOutputSymbol, sModelType, 'Central Composite Design', iTrialId)
+    # dfCentralCompositeDesign = Central_Composite_Design.__init__(sOutputSymbol, sModelType)
     
-    Compile_Responses.__init__(sOutputSymbol, sModelType, 'Central Composite Design')
+    # for iTrialId, _ in dfCentralCompositeDesign.iterrows():
+    #     Predictive_Model.__init__(sOutputSymbol, sModelType, 'Central Composite Design', iTrialId)
+    #     Calculate_Metrics.__init__(sOutputSymbol, sModelType, 'Central Composite Design', iTrialId)
     
-    Response_Surface_Method.__init__(sOutputSymbol, sModelType)
+    # Compile_Responses.__init__(sOutputSymbol, sModelType, 'Central Composite Design')
+    
+        dfOptimumDesign = Response_Surface_Method.__init__(sOutputSymbol, sModelType)
+        
+        Predictive_Model.__init__(sOutputSymbol, sModelType, 'Optimum Design', 0)
+        Calculate_Metrics.__init__(sOutputSymbol, sModelType, 'Optimum Design', 0)
+        Compile_Responses.__init__(sOutputSymbol, sModelType, 'Optimum Design')
+    
     
     
     

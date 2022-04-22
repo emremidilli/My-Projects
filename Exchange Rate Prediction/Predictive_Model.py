@@ -22,7 +22,6 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 
 def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
-    
     # #-----------------------------Keras reproducible------------------#
     # SEED = 1234
 
@@ -44,14 +43,17 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     
     
     # CONFIGURATION
-    sFolderPath = 'Data/'+ sOutputSymbol +'//'+ sModelType + '//'+ sDesignType+ '//'
-    dfDesign = pd.read_csv(sFolderPath + 'Design.csv', index_col = 'Run ID')
+    sDesignFolderPath = 'Data/'+ sOutputSymbol +'//'+ sModelType + '//'+ sDesignType+ '//'
+    
+    sModelFolderPath = os.path.join(sDesignFolderPath + str(iTrialId))
+    
+    dfDesign = pd.read_csv(sDesignFolderPath + 'Design.csv', index_col = 'Run ID')
     iBatchSize = dfDesign.loc[iTrialId, 'Batch Size']
     iNrOfHiddenNeurons = dfDesign.loc[iTrialId, 'Number of Hidden Neurons']
     iBackwardTimeWindow = 3
     iForwardTimeWindow =3
 
-    sModelName = os.path.join(sFolderPath + str(iTrialId))
+    
 
 
     # LOAD DATA
@@ -100,7 +102,7 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
         dfScaledOhlc.loc[ixValidation, sColumn] = np.reshape(oScaler.transform(dfValidation), (-1))
         dfScaledOhlc.loc[ixTest, sColumn] = np.reshape(oScaler.transform(dfTest), (-1))
 
-        sScalerFilePath = os.path.join(sModelName , "__scalers__")
+        sScalerFilePath = os.path.join(sModelFolderPath , "__scalers__")
         sScalerFilePath = os.path.join(sScalerFilePath , sColumn + ".sav")
         os.makedirs(os.path.dirname(sScalerFilePath), exist_ok=True)
 
@@ -232,8 +234,6 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
         return tf.math.reduce_mean(aTotalLoss)
     
     ## BUILD MODEL
-    
-    ### MLP
     if sModelType == 'MLP':
         aInputMlp = keras.Input(
             shape=(iBackwardTimeWindow, iNrInputFeatures))
@@ -283,7 +283,7 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     
 
     
-    elif sModelType == 'Convolutional Encoder Decoder':
+    elif sModelType == 'Conv-EncDec':
         aInputs = keras.Input(
             shape=(iBackwardTimeWindow, iNrInputFeatures))
     
@@ -300,30 +300,30 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     
         aDecoderInputs = keras.layers.RepeatVector(iForwardTimeWindow)(aFlatted)
     
-        aDecoderHiddens = keras.layers.LSTM(iNrOfHiddenNeurons, 
-                               return_state = False, 
-                               return_sequences = True
-                              )(aDecoderInputs, initial_state=[aFinalH, aFinalC])
+        aDecoderHiddens = keras.layers.LSTM(
+            iNrOfHiddenNeurons, 
+            return_state = False, 
+            return_sequences = True)(aDecoderInputs, initial_state=[aFinalH, aFinalC])
         
 
         aOutputs = keras.layers.TimeDistributed(
             keras.layers.Dense(iNrOutputFeatures)
         )(aDecoderHiddens)
     
-        oPredictiveModel = keras.Model(
+        oModelConvEnc = keras.Model(
             inputs=aInputs,
             outputs=aOutputs
         )
     
-        oOptimizer = tf.keras.optimizers.Adam(learning_rate=1e-05)
-        oPredictiveModel.compile(loss = fCalculateLoss,
-                                 optimizer=oOptimizer
+        oOptimizerConvEnc = tf.keras.optimizers.Adam(learning_rate=1e-04)
+        oModelConvEnc.compile(loss = fCalculateLoss,
+                                 optimizer=oOptimizerConvEnc
                                 )
         
+        oPredictiveModel = oModelConvEnc
         
-
-
-    if sModelType == 'Luongs Attention':
+        
+    if sModelType == 'Luongs-Att':
         aEncoderInputs = keras.Input(
             shape=(iBackwardTimeWindow, iNrInputFeatures))
     
@@ -357,14 +357,14 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
             outputs=aDecoderOutputs
         )
     
-        oOptimizer = tf.keras.optimizers.Adam(learning_rate=1e-05)
+        oOptimizer = tf.keras.optimizers.Adam(learning_rate=1e-04)
         oPredictiveModel.compile(loss = fCalculateLoss, 
                                  optimizer=oOptimizer
                                 )
     
     
     ## Plot Model Architecutre
-    tf.keras.utils.plot_model(oPredictiveModel,  show_shapes=True, to_file = sFolderPath +'\Model architecture.png')    
+    tf.keras.utils.plot_model(oPredictiveModel,  show_shapes=True, to_file = sModelFolderPath +'\Model architecture.png')    
     
     ## Fit Model
     iEpochSize = 10000
@@ -387,18 +387,15 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     ## Save Epoch History
 
     dfHistory = pd.DataFrame(oPredictiveModel.history.history)
-    dfHistory.to_csv(sModelName + '\dfHistory.csv')
+    dfHistory.to_csv(sModelFolderPath + '\dfHistory.csv')
 
 
 
     ## Save Model
-    oPredictiveModel.save_weights(sModelName+'\model weights')
-
+    oPredictiveModel.save(sModelFolderPath + '\\__model__')
 
 
     ## Test Model
-    oPredictiveModel.load_weights(sModelName+'\model weights')
-
     aPrediction = oPredictiveModel.predict(aInputTest)
     aPrediction = aPrediction.reshape((-1, iForwardTimeWindow * iNrOutputFeatures))
     dfPrediction = pd.DataFrame(data = aPrediction, index = ixTest, columns = aIxOutputColumns)
@@ -408,9 +405,9 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
 
 
     ## Save Results
-    dfActual.to_csv(sModelName + '\dfActual.csv')
-    dfPrediction.to_csv(sModelName + '\dfPrediction.csv')
+    dfActual.to_csv(sModelFolderPath + '\dfActual.csv')
+    dfPrediction.to_csv(sModelFolderPath + '\dfPrediction.csv')
 
     dfPerformance = pd.DataFrame(data = [dtTrainingDuration], columns = ['value'], index = ['training duration'] )
-    dfPerformance.to_csv(sModelName + '\dfPerformance.csv')
+    dfPerformance.to_csv(sModelFolderPath + '\dfPerformance.csv')
 

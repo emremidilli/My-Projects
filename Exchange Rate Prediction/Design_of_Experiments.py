@@ -230,28 +230,43 @@ class Response_Surface_Method():
         ## Optimum Configuration
         dfOptimumConfig = dfCombinations[dfCombinations['Response'] == dfCombinations['Response'].min()].head(1)
         
-        fig = plt.figure(figsize=(20,8))
-        ax = fig.add_subplot(111, projection='3d')
-        
-        ax.plot_trisurf(dfCombinations.iloc[:, 0], 
-                        dfCombinations.iloc[:, 1], 
-                        dfCombinations['Response'], 
-                        linewidth=0, 
-                        antialiased=False,
-                        cmap=cm.hsv
-                       )
-        fig.get_figure().savefig(sFolderPath + '\Response Surface Method\surface plot.png')
-        plt.show()
         
         ## Save Performance
-        dicPerformance=  {'Performance' : ['Regression Score', 'Feature Names' ,'Intercept', 'Coefficients', 'Hyperparameter Names', 'Optimum Hyperparameters', 'Optimum Response' ] ,
-            'Value' : [fRegressionScore, 
-                       list(oPolynomicalFeatures.get_feature_names_out()),
-                       fRegressionIntercept, 
-                       list(aRegressionCoeff),
-                       list(dfOptimumConfig.iloc[:,:-1].columns), 
-                       list(dfOptimumConfig.iloc[0,:-1].values),  
-                       dfOptimumConfig.iloc[0,-1] ]}
+        dicPerformance=  {
+            'Performance' : [
+                'Regression Score', 
+                'Feature Names', 
+                'Intercept', 
+                'Coefficients', 
+                'Hyperparameter Names', 
+                'Optimum Hyperparameters', 
+                'Optimum Response'
+                ] ,
+            'Value' : [
+                fRegressionScore, 
+                list(oPolynomicalFeatures.get_feature_names_out()),
+                fRegressionIntercept, 
+                list(aRegressionCoeff),
+                list(dfOptimumConfig.iloc[:,:-1].columns), 
+                list(dfOptimumConfig.iloc[0,:-1].values),  
+                dfOptimumConfig.iloc[0,-1] 
+                ]
+            }
         
         dfPerformance = pd.DataFrame(dicPerformance).set_index('Performance')
         dfPerformance.to_csv(sDesignFolder + '/dfPerformance.csv', index=True, index_label='Performance')
+        
+        
+        ## Create Optimum Design
+        dfOptimumDesign = dfOptimumConfig.drop(['Response'], axis = 1)
+        sOptimumDesignFolder = sFolderPath + '\\Optimum Design\\'
+        dfOptimumDesign.index = [0]
+        os.makedirs(sOptimumDesignFolder, exist_ok = True)
+        dfOptimumDesign.to_csv(sOptimumDesignFolder + 'Design.csv', index=True, index_label='Run ID')
+        
+        return dfOptimumDesign
+        
+        
+        
+        
+        
