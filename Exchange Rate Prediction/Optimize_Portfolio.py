@@ -307,27 +307,6 @@ class PortfolioManagement():
         self.EnsureNonNegativeBalances(aIndividualX,aIndividualY)
         
 
-        
-        
-        
-
-    def aAdjustPopulation(self, aPopulationX,aPopulationY):
-        for i in range(len(aPopulationX)):
-            aIndividualX = aPopulationX[i]
-            aIndividualY = aPopulationY[i]
-            
-            self.EnsureVariableDependency(aIndividualX, aIndividualY)          
-            self.EnsureNonNegativeReturns(aIndividualX, aIndividualY)
-            self.EnsureRiskConstraint(aIndividualX, aIndividualY)
-            self.EnsureNonNegativeBalances(aIndividualX,aIndividualY)
-            
-            aPopulationX[i] = aIndividualX
-            aPopulationY[i] = aIndividualY
-
-    
-    
-            
-
     def decEvaluateFitness(self, aIndividualX, aIndividualY):
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)

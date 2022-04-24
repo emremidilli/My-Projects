@@ -19,7 +19,32 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping
 
+## Define Custom Loss Function
 
+### While loss function is defined following criteria is taken into consideration:
+
+### Opposite signs should be penalized.
+### Opposite sings will be worse when the magnitute of error increases.
+### Any of same sign is better than any of the opposite signs.
+### Same sign is the best when the error is 0.
+### Following logic also should have been implemented but it was unsuccessful to implement due to forcing negative errors. It will be used as 'metric' function.
+
+### Same sign is positive error is better than negative error (err = act - pred )
+
+def fCalculateLoss(aActual, aPrediction):
+    aLossDueToError = tf.math.subtract(aActual ,aPrediction)
+    aLossDueToError = tf.math.abs(aLossDueToError)
+    
+    iMultiplier = aActual.shape[len(aActual.shape) - 1]
+    fPenalty = tf.math.reduce_max(aLossDueToError)
+    fPenalty = fPenalty * iMultiplier
+    
+    aLossDueToSignDiff = tf.math.abs(tf.math.subtract(tf.math.sign(aActual), tf.math.sign(aPrediction)) )
+    aLossDueToSignDiff = tf.where(aLossDueToSignDiff == 0, aLossDueToSignDiff, fPenalty)
+
+    aTotalLoss = aLossDueToError + aLossDueToSignDiff
+
+    return tf.math.reduce_mean(aTotalLoss)
 
 def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     # #-----------------------------Keras reproducible------------------#
@@ -208,30 +233,7 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
 
 
 
-    ## Define Custom Loss Function
-    
-    ### While loss function is defined following criteria is taken into consideration:
 
-    ### Opposite signs should be penalized.
-    ### Opposite sings will be worse when the magnitute of error increases.
-    ### Any of same sign is better than any of the opposite signs.
-    ### Same sign is the best when the error is 0.
-    ### Following logic also should have been implemented but it was unsuccessful to implement due to forcing negative errors. It will be used as 'metric' function.
-    
-    ### Same sign is positive error is better than negative error (err = act - pred )
-    
-    def fCalculateLoss(aActual, aPrediction):
-        aLossDueToError = tf.math.subtract(aActual ,aPrediction)
-        aLossDueToError = tf.math.abs(aLossDueToError)
-
-        fPenalty = tf.math.reduce_max(aLossDueToError)
-
-        aLossDueToSignDiff = tf.math.abs(tf.math.subtract(tf.math.sign(aActual), tf.math.sign(aPrediction)) )
-        aLossDueToSignDiff = tf.where(aLossDueToSignDiff == 0, aLossDueToSignDiff, fPenalty)
-
-        aTotalLoss = aLossDueToError + aLossDueToSignDiff
-
-        return tf.math.reduce_mean(aTotalLoss)
     
     ## BUILD MODEL
     if sModelType == 'MLP':

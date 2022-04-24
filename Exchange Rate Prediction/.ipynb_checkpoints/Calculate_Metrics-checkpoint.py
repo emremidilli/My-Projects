@@ -8,38 +8,6 @@ import os
 import tensorflow as tf
 
 
-# CONVERT [return] OF COMBINATIONS
-def dfGetCombinationsOfReturns(dfToConvert):
-    iForwardTimeWindow = dfToConvert.shape[1]
-    dfConverted = pd.DataFrame(index = dfToConvert.index)
-    for i in range(0, dfToConvert.shape[1]):
-        for j in range(i, dfToConvert.shape[1]): 
-            dfConverted.loc[: , str(i) + '_' + str(j) ] = dfToConvert.iloc[:, i:j+1].sum(axis = 1)
-    
-    dfConverted = dfConverted.iloc[::iForwardTimeWindow]
-    return dfConverted
-
-## Define Custom Metric Function
-def fCalculateCustomMetric(aActual,aPrediction):
-    aLossDueToError = tf.math.subtract(aActual,aPrediction)
-    
-    iMultiplier = aActual.shape[len(aActual.shape) - 1]
-    fPenalty = tf.math.abs(tf.math.reduce_max(aLossDueToError))
-    fPenalty = fPenalty * iMultiplier 
-    
-    aLossDueToError = tf.where(aLossDueToError < 0 , aLossDueToError, 0 )
-    aLossDueToError = tf.math.abs(aLossDueToError)
-
-    
-
-    aLossDueToSignDiff = tf.math.abs(tf.math.subtract(tf.math.sign(aActual), tf.math.sign(aPrediction)) )
-    aLossDueToSignDiff = tf.where(aLossDueToSignDiff == 0, aLossDueToSignDiff, fPenalty)
-
-    aTotalLoss = aLossDueToError + aLossDueToSignDiff
-    fAggLoss = tf.math.reduce_mean(aTotalLoss).numpy()
-    return fAggLoss
-
-
 def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     
     # CONFIGURATION
@@ -51,12 +19,39 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
     dfPrediction = pd.read_csv(sModelName+'\dfPrediction.csv',header=[0, 1], index_col=0)
     dfPerformance = pd.read_csv(sModelName+'\dfPerformance.csv', index_col=0)
 
+    iForwardTimeWindow = dfActual.shape[1]
+    
+    
+    # CONVERT [return] OF COMBINATIONS
+    def dfGetCombinationsOfReturns(dfToConvert):
+        dfConverted = pd.DataFrame(index = dfToConvert.index)
+        for i in range(0, dfToConvert.shape[1]):
+            for j in range(i, dfToConvert.shape[1]): 
+                dfConverted.loc[: , str(i) + '_' + str(j) ] = dfToConvert.iloc[:, i:j+1].sum(axis = 1)
+        
+        dfConverted = dfConverted.iloc[::iForwardTimeWindow]
+        return dfConverted
     
     dfActualReturnCombinations = dfGetCombinationsOfReturns(dfActual)
     dfPredictionReturnCombinations = dfGetCombinationsOfReturns(dfPrediction)
     
     # SAVE RESULTS
-
+    ## Define Custom Metric Function
+    def fCalculateCustomMetric(aActual,aPrediction):
+        aLossDueToError = tf.math.subtract(aActual,aPrediction)
+        aLossDueToError = tf.where(aLossDueToError < 0 , aLossDueToError, 0 )
+        aLossDueToError = tf.math.abs(aLossDueToError)
+    
+        fPenalty = tf.math.reduce_max(aLossDueToError)
+    
+        aLossDueToSignDiff = tf.math.abs(tf.math.subtract(tf.math.sign(aActual), tf.math.sign(aPrediction)) )
+        aLossDueToSignDiff = tf.where(aLossDueToSignDiff == 0, aLossDueToSignDiff, fPenalty)
+    
+        aTotalLoss = aLossDueToError + aLossDueToSignDiff
+        fAggLoss = tf.math.reduce_sum(aTotalLoss).numpy()
+        return fAggLoss
+    
+    
     ## Log Metrics
     dictMetrics = {
         'mean absolute error':mean_absolute_error(dfActualReturnCombinations, dfActualReturnCombinations),
