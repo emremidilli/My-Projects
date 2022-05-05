@@ -40,9 +40,7 @@ aExchangeRates  = pd.read_csv('Data/cryptocurrencies.csv')['Symbol'].values
 #         Calculate_Metrics.__init__(sOutputSymbol, sModelType, 'Optimum Design', 0)
 #         Compile_Responses.__init__(sOutputSymbol, sModelType, 'Optimum Design')
     
-    
 
-    
 
 dfBestModels = pd.DataFrame(
     data ={
@@ -57,7 +55,5 @@ dfOhlc['timestamp'] = pd.DatetimeIndex(dfOhlc['timestamp'])
 dfOhlc.set_index('timestamp', inplace=True)
 
 
-ixToSimulate = dfOhlc.iloc[-113:].index
+ixToSimulate = dfOhlc.iloc[-15:].index
 Simulate.__init__(dfBestModels, ixToSimulate)
-
-

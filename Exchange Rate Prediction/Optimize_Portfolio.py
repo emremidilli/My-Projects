@@ -11,22 +11,20 @@ from datetime import datetime
 
 
 class PortfolioManagement():
-        
-    def __init__(self, dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, dfFinancialProducts , dfForwardTimeSteps, decInitialBalance, decMaximumRiskRmse, dfPredictionErrorRmse):
+    
+    def __init__(self, dfExpectedPricesClose ,dfExpectedPricesOpen, dfExpectedSpread, aFinancialProducts , aForwardTimeSteps, decInitialBalance, decMaximumRisk, dfPredictionError):
         self.dfExpectedPricesClose= dfExpectedPricesClose
         self.dfExpectedPricesOpen= dfExpectedPricesOpen
         self.dfExpectedSpread= dfExpectedSpread
-        self.dfForwardTimeSteps = dfForwardTimeSteps
-        self.dfFinancialProducts = dfFinancialProducts
+        self.dfForwardTimeSteps = pd.DataFrame(aForwardTimeSteps, columns = ['TIME_STEP'])
+        self.dfFinancialProducts = pd.DataFrame(data =aFinancialProducts, columns = ['FINANCIAL_PRODUCT'])
         self.decInitialBalance = decInitialBalance
         self.dfIndices = self.dfGetIndices()
         self.aPriceDiffs = self.aGetPriceDiffs(self.dfExpectedPricesClose, self.dfExpectedPricesOpen)
         self.decStepSizeRatio = 0.01
-        self.aAverageRisks = self.aGetAverageRisks(dfPredictionErrorRmse)
-        self.decMaximumRiskRmse = decMaximumRiskRmse
+        self.aPredictionError = self.aConvertPredictionErrors(dfPredictionError)
+        self.decMaximumRisk = decMaximumRisk
         
-        
-
     def dfGetIndices(self):
         aI = []
         aJ = []
@@ -53,7 +51,6 @@ class PortfolioManagement():
         
         return dfIndices        
 
-
     def aGetPriceDiffs(self, dfPricesClose, dfPricesOpen):
         
         aPriceDiffs = []
@@ -69,8 +66,6 @@ class PortfolioManagement():
             aPriceDiffs.append(decPriceDiff)
 
         return aPriceDiffs
-       
-        
        
     def dfGetDecisionVariables(self, sVariableLetter = "x"):
         aTypes = []
@@ -129,7 +124,6 @@ class PortfolioManagement():
         dfDecisonVariables = pd.DataFrame(data=dicDecisionVariables)       
         return dfDecisonVariables
     
-    
     def dfGetObjectiveFunctions(self):
         dicObjectiveFunctions =  {
                         "label":["Fitness"]
@@ -139,11 +133,9 @@ class PortfolioManagement():
         
         return dfObjectiveFunctions
     
-    
-    
-    def aGetAverageRisks(self, dfPredictionErrorRmse):
+    def aConvertPredictionErrors(self, dfPredictionError):
         
-        aAverageRisks = []
+        aToReturn = []
         
         for iIndex, aRow in self.dfIndices.iterrows():
 
@@ -151,19 +143,12 @@ class PortfolioManagement():
             j = aRow["j"]
             k = aRow["k"]
             
-            aIntervalErrors = dfPredictionErrorRmse.iloc[i][j:k+1]
+            fPredictionError = dfPredictionError.iloc[i].loc[str(j)+'_'+str(k)]
             
-            decAverageRisk = np.mean(aIntervalErrors)
-            
-            aAverageRisks.append(decAverageRisk)
+            aToReturn.append(fPredictionError )
         
-
-        return aAverageRisks
+        return aToReturn
             
-            
-            
-        
-
     def aCalculateReturns(self,aAmountsX, aPositionsY):
         aReturns = []
         
@@ -177,19 +162,15 @@ class PortfolioManagement():
             decLossDueToSpread = abs(aPositionsY[iIndex])*aAmountsX[iIndex]*decSpreadRatio
 
             decReturn = decReturn - decLossDueToSpread
-
             aReturns.append(decReturn)
             
         return aReturns
-
-
+    
     def aCalculateBalances(self, aReturns, aAmounts):
         
         aBalances = np.zeros(self.dfForwardTimeSteps.shape[0])
-        
-        
-        for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
             
+        for jIndex, jRow in self.dfForwardTimeSteps.iterrows():
             aIndicesOfClosingOrder = self.dfIndices[self.dfIndices['k'] == jIndex].index
             aIndicesOfOpeningOrder = self.dfIndices[self.dfIndices['j'] == jIndex].index
             
@@ -209,7 +190,7 @@ class PortfolioManagement():
             
             
             if jIndex == 0:
-                 aBalances[jIndex] =  self.decInitialBalance +  decCapitalToBeReturned + decProfitToBeReturned - decCapitalToBeInvested
+                aBalances[jIndex] =  self.decInitialBalance +  decCapitalToBeReturned + decProfitToBeReturned - decCapitalToBeInvested
             else:
                 aBalances[jIndex] =  aBalances[jIndex - 1] +  decCapitalToBeReturned + decProfitToBeReturned - decCapitalToBeInvested
             
@@ -217,7 +198,19 @@ class PortfolioManagement():
         return aBalances
     
     
-
+    
+    def aAdjustPopulation(self, aPopulationX, aPopulationY):
+        for i in range(0, len(aPopulationX)):
+            aIndividualX = aPopulationX[i]
+            aIndividualY = aPopulationY[i]
+            self.EnsureVariableDependency(aIndividualX, aIndividualY)
+            self.EnsureNonNegativeReturns(aIndividualX, aIndividualY)
+            self.EnsureRiskConstraint(aIndividualX, aIndividualY)
+            self.EnsureNonNegativeBalances(aIndividualX, aIndividualY)
+            
+            aPopulationX[i] = aIndividualX
+            aPopulationY[i] = aIndividualY
+            
     def EnsureNonNegativeReturns(self, aIndividualX, aIndividualY):
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)
@@ -229,8 +222,7 @@ class PortfolioManagement():
             if decReturn <= 0:
                 aIndividualX[i] = 0 
                 aIndividualY[i] = 0
-
-
+                
     def EnsureVariableDependency(self, aIndividualX, aIndividualY):
         for i in range(len(aIndividualX)):
             decX = aIndividualX[i]
@@ -244,16 +236,15 @@ class PortfolioManagement():
                 aIndividualY[i] = 0
                 
     def EnsureRiskConstraint(self, aIndividualX, aIndividualY):
-        
         while True:
          
             if sum(aIndividualX) == 0:
                 break
     
-            aWeightedRisks = list(np.multiply(self.aAverageRisks,aIndividualX))
+            aWeightedRisks = list(np.multiply(self.aPredictionError,aIndividualX))
             decWeightedAverage = sum(aWeightedRisks)/sum(aIndividualX)
                         
-            if decWeightedAverage > self.decMaximumRiskRmse:
+            if decWeightedAverage > self.decMaximumRisk:
                 decMaxRisk = max(aWeightedRisks)
                 iIndexMaxRisk = aWeightedRisks.index(decMaxRisk)
                 
@@ -262,8 +253,6 @@ class PortfolioManagement():
             else:
                 break
 
-
-
     def EnsureNonNegativeBalances(self, aIndividualX, aIndividualY):
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)
@@ -271,6 +260,7 @@ class PortfolioManagement():
         aReturns = self.aCalculateReturns(aAmountsX , aPositionsY)
         aBalances = self.aCalculateBalances(aReturns, aAmountsX)
         
+                
         aNegativeBalances = [i for i in aBalances if i < 0]
         
         if len(aNegativeBalances) == 0:
@@ -284,29 +274,22 @@ class PortfolioManagement():
         
         aAffectingReturns = np.array(aReturns)[aAffectingIndices]
         aAffectingReturns = list(aAffectingReturns)
+
+        aNonZeroAffectingReturns = [i for i in aAffectingReturns if i != 0]
         
-    
-        aNonZeroAffectingReturns = [i for i in aAffectingReturns if i != 0]        
-
         decMinAffectingReturn =min(aNonZeroAffectingReturns)
-
+        
         iMinimumAffectingReturnIndex = aAffectingReturns.index(decMinAffectingReturn)
         iMinimumAffectingReturnIndex = aAffectingIndices[iMinimumAffectingReturnIndex]
         
-        
-        i = self.dfIndices.iloc[iMinimumAffectingReturnIndex].i
-        j = iIndexMinimumBalance
-        k = self.dfIndices.iloc[iMinimumAffectingReturnIndex].k
-        
-        # print("balance is broken: " + str(len(aNegativeBalances)) + "*****" + str(sum(aNegativeBalances)) + "*****" + str(decMinimumBalance) + "*****" + str(aIndividualX[iMinimumAffectingReturnIndex]) + "*****" + str(decMinAffectingReturn) + "******" +  str(aIndividualY[iMinimumAffectingReturnIndex]) + "******" + str(i)+ "******" + str(j)+ "******" + str(k))
-          
-    
         aIndividualX[iMinimumAffectingReturnIndex] = 0
         aIndividualY[iMinimumAffectingReturnIndex] = 0
 
         self.EnsureNonNegativeBalances(aIndividualX,aIndividualY)
+
         
 
+        
     def decEvaluateFitness(self, aIndividualX, aIndividualY):
         aAmountsX =  list(aIndividualX)
         aPositionsY = list(aIndividualY)
@@ -318,8 +301,6 @@ class PortfolioManagement():
         decTotalProfit = decFinalBalance - self.decInitialBalance
         
         return decTotalProfit
-    
-    
     
     def Main(self):
         dfDecisonVariablesX = self.dfGetDecisionVariables("x")
@@ -333,15 +314,14 @@ class PortfolioManagement():
         oToolbox.register("evaluate", self.decEvaluateFitness)
         
         oGeneticAlgorithm = GeneticAlgorithm(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
-        aOptimumResult = oGeneticAlgorithm.Optimize(oToolbox)
+        aOptimumResult, dfAlgorithmHistory = oGeneticAlgorithm.Optimize(oToolbox)
         
         # oParticleSwarmAlgorithm = ParticleSwarmOptimization(self, creator.FitnessFunction,dfObjectiveFunctions, dfDecisonVariablesX, dfDecisonVariablesY)
         # aOptimumResult = oParticleSwarmAlgorithm.Optimize(oToolbox)
         
         aOptimumAmounts, aOptiumumPositions = np.array_split(aOptimumResult, 2)
         
-
-        return aOptimumAmounts, aOptiumumPositions
+        return aOptimumAmounts, aOptiumumPositions, dfAlgorithmHistory
 
 
 class variable_types(enum.Enum):
@@ -421,7 +401,7 @@ class GeneticAlgorithm():
     def mutate(self, aIndividual, dfDecisonVariables):            
         tools.mutPolynomialBounded(aIndividual,self.decMutationCrowdingDegree, dfDecisonVariables["lower_bound"].values.tolist(),dfDecisonVariables["upper_bound"].values.tolist(), self.decMutationRate)
     
-    
+
     def Optimize(self, toolbox):
         creator.create("Individual", list, fitness = self.FitnessFunction)
         
@@ -445,7 +425,8 @@ class GeneticAlgorithm():
         dfLabelsY =  self.dfDecisonVariablesY["label"] 
         dfBothDecisionVariableLabels = dfLabelsX.append(dfLabelsY)
                 
-        oOutputFile = ResultLogs.OpenOutputFile(dfBothDecisionVariableLabels,self.dfObjectiveFunctions["label"])
+        
+        dfAlgorithmHistory = pd.DataFrame()
         
         
         aFitnesses = list(map(toolbox.evaluate, aPopulationX, aPopulationY))
@@ -460,7 +441,6 @@ class GeneticAlgorithm():
            
         iRunId = 1
         for i in range(self.iMaxNumberOfGenerations):
-            print("Generation #: " + str(i))
            
             aOffspringX, aOffspringY = toolbox.select(aPopulationX, aPopulationY)
 
@@ -498,7 +478,16 @@ class GeneticAlgorithm():
                 aIndY = aPopulationY[iIndex]
                 aIndFull = aIndX + aIndY
                 
-                ResultLogs.LogToOutputFile(oOutputFile, iRunId, i+1,aIndFull, aIndX.fitness.values)
+                
+                dfAlgorithmHistory = dfAlgorithmHistory.append( 
+                    pd.DataFrame
+                    (
+                        data = [[iRunId,i+1, datetime.now().strftime("%m/%d/%Y, %H:%M:%S")] + list(aIndFull) + list(aIndX.fitness.values)]
+                    ),
+                    ignore_index=True
+                )
+                
+                    
                 iRunId = iRunId + 1
                 
             aBestIndX = tools.selBest(aPopulationX, 1)[0]
@@ -511,9 +500,18 @@ class GeneticAlgorithm():
                            
             
         aBestIndFull = aBestIndX + aBestIndY
-        ResultLogs.LogToOutputFile(oOutputFile, "OPTIMUM RESULT", "", aBestIndFull, aBestIndX.fitness.values)
-                
-        return aBestIndFull
+        
+        dfAlgorithmHistory= dfAlgorithmHistory.append( 
+            pd.DataFrame
+            (
+                data = [["OPTIMUM RESULT",'',datetime.now().strftime("%m/%d/%Y, %H:%M:%S")] + list(aBestIndFull) + list(aBestIndX.fitness.values)]
+            ),
+            ignore_index=True
+        )
+        
+        dfAlgorithmHistory.columns  = ["Run ID", "Generation ID", "Time Stamp"] + list(dfBothDecisionVariableLabels) + list(self.dfObjectiveFunctions["label"])
+        
+        return aBestIndFull, dfAlgorithmHistory
 
 
 class ParticleSwarmOptimization():
@@ -604,8 +602,6 @@ class ParticleSwarmOptimization():
             if eVariableType == variable_types.integer:
                 oParticle[i] = int(oParticle[i])
         
-        
-
 
     def Optimize(self, toolbox):
         creator.create("Particle", list, fitness = self.FitnessFunction, aSpeed = list ,aSpeedMin = list, aSpeedMax = list, aPersonalBest = list, aLabel = list)
@@ -628,15 +624,13 @@ class ParticleSwarmOptimization():
         dfBothDecisionVariableLabels = dfLabelsX.append(dfLabelsY)
         
                 
-        oOutputFile = ResultLogs.OpenOutputFile(dfBothDecisionVariableLabels,self.dfObjectiveFunctions["label"])
-                
+        dfAlgorithmHistory = pd.DataFrame()                
 
         oParticleXGlobalBest = list
         oParticleYGlobalBest = list
         
         iRunId = 1
         for i in range(self.iMaxNumberOfGenerations):
-            print("Generation #: " + str(i))
             
             for iIndex in range(len(aPopulationX)):
 
@@ -650,7 +644,15 @@ class ParticleSwarmOptimization():
 
 
                 oParticle = oParticleX + oParticleY
-                ResultLogs.LogToOutputFile(oOutputFile, iRunId, i+1,oParticle, aFitness)
+            
+                dfAlgorithmHistory = dfAlgorithmHistory.append( 
+                    pd.DataFrame
+                    (
+                        data = [[iRunId,i+1, datetime.now().strftime("%m/%d/%Y, %H:%M:%S")] + list(oParticle) + list(aFitness)]
+                    ),
+                    ignore_index = True
+                )
+                
                 
                 if not oParticleX.aPersonalBest:
                     oParticleX.aPersonalBest = creator.Particle(oParticleX)
@@ -691,8 +693,8 @@ class ParticleSwarmOptimization():
                 
                 toolbox.update(oParticleX, oParticleXGlobalBest, self.dfDecisonVariablesX)     
                 # toolbox.update(oParticleY, oParticleXGlobalBest, self.dfDecisonVariablesY)
-            
-            
+                
+
             self.oPortfolioManager.aAdjustPopulation(aPopulationX, aPopulationY)
             
             iBestOccurance = aPopulationX.count(oParticleXGlobalBest)
@@ -701,34 +703,15 @@ class ParticleSwarmOptimization():
         
 
         oParticleGlobalBest = oParticleXGlobalBest + oParticleYGlobalBest
-        ResultLogs.LogToOutputFile(oOutputFile, "OPTIMUM RESULT", "", oParticleGlobalBest, oParticleXGlobalBest.fitness.values)
-                                
+        
+        dfAlgorithmHistory= dfAlgorithmHistory.append( 
+            pd.DataFrame
+            (
+                data = [["OPTIMUM RESULT",'',datetime.now().strftime("%m/%d/%Y, %H:%M:%S")] + list(oParticleGlobalBest) + list(oParticleXGlobalBest.fitness.values)]
+            ),
+            ignore_index = True
+        )
+        
+        dfAlgorithmHistory.columns  = ["Run ID", "Generation ID", "Time Stamp"] + list(dfBothDecisionVariableLabels) + list(self.dfObjectiveFunctions["label"])
         return oParticleGlobalBest
     
-
-class ResultLogs():
-    def OpenOutputFile(aDecisionVariableLabels,aFitnessLabels):
-        sTimeStamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        sFileName = sTimeStamp + '.txt'
-        
-        oOutputFile = open(sFileName, "a")
-
-        sHeader = "Run ID"
-        sHeader = sHeader + ';' + "Generation ID"
-        sHeader = sHeader + ';' + "Time Stamp"
-        sHeader = sHeader + ';' + ';'.join(str(x) for x in aDecisionVariableLabels)
-        sHeader = sHeader + ';' +';'.join(str(x) for x in aFitnessLabels)
-        oOutputFile.write(sHeader)
-
-        return oOutputFile
-    
-    
-    def LogToOutputFile(oOutputFile, iRunId, iGenerationId, aDecisionVariables, aFitnessValues):
-        sTimeStamp = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-        sValues = str(iRunId)
-        sValues = sValues + ';' + str(iGenerationId)
-        sValues = sValues + ';' + str(sTimeStamp)
-        sValues = sValues + ';' + ';'.join(str(x) for x in aDecisionVariables)
-        sValues = sValues + ';' + ';'.join(str(x) for x in aFitnessValues)
-        
-        oOutputFile.write('\n' + sValues)

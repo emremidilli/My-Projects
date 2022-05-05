@@ -20,7 +20,7 @@ def dfGetCombinationsOfReturns(dfToConvert):
     return dfConverted
 
 ## Define Custom Metric Function
-def fCalculateCustomMetric(aActual,aPrediction):
+def fCalculateCustomMetric(aActual,aPrediction, iAxis = None):
     aLossDueToError = tf.math.subtract(aActual,aPrediction)
     
     iMultiplier = aActual.shape[len(aActual.shape) - 1]
@@ -36,7 +36,7 @@ def fCalculateCustomMetric(aActual,aPrediction):
     aLossDueToSignDiff = tf.where(aLossDueToSignDiff == 0, aLossDueToSignDiff, fPenalty)
 
     aTotalLoss = aLossDueToError + aLossDueToSignDiff
-    fAggLoss = tf.math.reduce_mean(aTotalLoss).numpy()
+    fAggLoss = tf.math.reduce_mean(aTotalLoss, iAxis).numpy()
     return fAggLoss
 
 
