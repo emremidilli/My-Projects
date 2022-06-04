@@ -387,7 +387,6 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
 
 
     ## Save Epoch History
-
     dfHistory = pd.DataFrame(oPredictiveModel.history.history)
     dfHistory.to_csv(sModelFolderPath + '\dfHistory.csv')
 
