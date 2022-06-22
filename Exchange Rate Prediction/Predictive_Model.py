@@ -132,6 +132,8 @@ def __init__(sOutputSymbol, sModelType, sDesignType, iTrialId):
         os.makedirs(os.path.dirname(sScalerFilePath), exist_ok=True)
 
         pickle.dump(oScaler, open(sScalerFilePath, 'wb'))
+        
+    dfScaledOhlc = dfScaledOhlc.astype('float')
 
 
     ## Create Input Dataset
