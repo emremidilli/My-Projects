@@ -1,0 +1,64 @@
+\documentclass{article}
+\usepackage[linesnumbered, ruled, vlined]{algorithm2e}
+\usepackage{algpseudocode}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+
+
+\begin{document}
+
+    \pagenumbering{gobble}
+    \setlength{\interspacetitleruled}{-.4pt}
+    \begin{algorithm}
+
+    
+    \textbf{Input:}
+    $V$, the variable whose gradient should be added to $G$ and $grad\_table$ should be calculated
+
+    \textbf{Input:}
+    $\mathcal{G}$, the computational graph to modify
+	
+    \textbf{Input:}
+    $\mathcal{G}'$, the restriction of $\mathcal{G}$ to nodes that participate in the gradient
+    
+	\textbf{Input:}
+    $grad\_table$, a data structure mapping nodes to their gradients
+    
+    \If{$V \in grad\_table $}{
+        
+    		\textbf{Return} $grad\_table[V]$
+    		
+    }
+    
+	
+	$i \gets 1$
+	
+	$children \gets get\_consumers(V, \mathcal{G}')$
+	
+	\ForEach{$C \in children$}{
+	
+		$op \gets get\_operation(C)$
+		
+		$D \gets build\_grad(C, \mathcal{G}, \mathcal{G}', grad\_table)$
+		
+		$parents \gets get\_inputs(C, \mathcal{G}') $
+		
+		$\mathrm{G}^{(i)} \gets op.bprop(parents , V, D)$
+		
+		$i \gets i + 1$
+	
+	}
+	
+	$\mathrm{G} \gets \sum_{i}\mathrm{G}^{i}$
+	
+	$grad\_table[V] \gets \mathrm{G}$
+	
+	insert $\mathrm{G}$ and the operations creating it into $\mathcal{G}$
+	
+	\textbf{Return} $\mathrm{G}$
+    
+    \end{algorithm}    
+    
+\end{document}
+
+
+

@@ -1,0 +1,46 @@
+\documentclass{article}
+\usepackage[linesnumbered, ruled, vlined]{algorithm2e}
+\usepackage{algpseudocode}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+
+
+
+\begin{document}
+
+    \pagenumbering{gobble}
+    \setlength{\interspacetitleruled}{-.4pt}
+    \begin{algorithm}
+
+    
+    \textbf{Input:}
+    $T$, the target set of variables whose gradients must be computed
+
+    \textbf{Input:}
+    $\mathcal{G}$, the computational graph
+
+    \textbf{Input:}
+    $z$, the variable to be differentiated with respect to
+
+	\textbf{Initialize:}
+	Let $\mathcal{G}'$ be $\mathcal{G}$ pruned to contain only nodes that are ancestors of $z$ and descendants of nodes in $T$.
+	
+	\textbf{Initialize:}
+	$grad\_table$, data structure associating tensors to their gradients
+	
+	$grad\_table[z] \gets 1$
+	
+
+	\ForEach {$V  \in T $}{
+	
+		build\_grad($V, \mathcal{G}, \mathcal{G}', grad\_table$)
+
+	}
+    
+    \textbf{Return} $grad\_table$
+    
+    \end{algorithm}
+    
+\end{document}
+
+
+
