@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.3) (preloaded format=pdflatex 2022.7.10)  15 JUL 2022 00:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.3) (preloaded format=pdflatex 2022.7.10)  29 SEP 2022 00:33
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -132,27 +132,28 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 (latex document.aux) ) 
 Here is how much of TeX's memory you used:
  1137 strings out of 478582
- 19913 string characters out of 2844344
- 313572 words of memory out of 3000000
+ 19865 string characters out of 2844344
+ 314572 words of memory out of 3000000
  19369 multiletter control sequences out of 15000+600000
  472002 words of font info for 39 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  55i,5n,62p,158b,107s stack positions out of 10000i,1000n,20000p,200000b,80000s
 <C:/Users/yunus/AppData/Local/Programs/MiKTeX/fonts/type1
-/public/amsfonts/cm/cmmi10.pfb><C:/Users/yunus/AppData/Local/Programs/MiKTeX/fo
-nts/type1/public/amsfonts/cm/cmmi5.pfb><C:/Users/yunus/AppData/Local/Programs/M
-iKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/yunus/AppData/Local/Pr
-ograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/yunus/AppData/
-Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr5.pfb><C:/Users/yunus/A
-ppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/
-yunus/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><
+/public/amsfonts/cm/cmex10.pfb><C:/Users/yunus/AppData/Local/Programs/MiKTeX/fo
+nts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/yunus/AppData/Local/Programs/
+MiKTeX/fonts/type1/public/amsfonts/cm/cmmi5.pfb><C:/Users/yunus/AppData/Local/P
+rograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/yunus/AppData
+/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/yunus
+/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr5.pfb><C:/User
+s/yunus/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><
 C:/Users/yunus/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cms
-y7.pfb><C:/Users/yunus/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfont
-s/cm/cmti10.pfb><C:/Users/yunus/AppData/Local/Programs/MiKTeX/fonts/type1/publi
-c/amsfonts/symbols/msbm10.pfb>
-Output written on "latex document.pdf" (1 page, 87653 bytes).
+y10.pfb><C:/Users/yunus/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfon
+ts/cm/cmsy7.pfb><C:/Users/yunus/AppData/Local/Programs/MiKTeX/fonts/type1/publi
+c/amsfonts/cm/cmti10.pfb><C:/Users/yunus/AppData/Local/Programs/MiKTeX/fonts/ty
+pe1/public/amsfonts/symbols/msbm10.pfb>
+Output written on "latex document.pdf" (1 page, 99093 bytes).
 PDF statistics:
- 56 PDF objects out of 1000 (max. 8388607)
+ 61 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
