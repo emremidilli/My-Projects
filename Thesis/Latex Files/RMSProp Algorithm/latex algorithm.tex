@@ -21,6 +21,12 @@
     $\beta$, momentum rate
     
     \textbf{Input:}
+    $\rho$, discount factor for historical gradient
+
+    \textbf{Input:}
+    $\zeta$, small constant to avoid zero division
+    
+    \textbf{Input:}
     $m$, minibatch size
     
 	\textbf{Input:}
@@ -38,7 +44,11 @@
     \textbf{Input:}
     $\mathbf{y}$, training dataset targets
     
-	$j \gets 1$
+    \textbf{Initialize:}
+    $r \gets 0$, accumulation of historical gradient
+    
+    \textbf{Initialize:}
+	$j \gets 1$, current epoch
 	
 	\While{$j \leq k$ }{
 			
@@ -48,21 +58,20 @@
 		\While{stopping criteria is not satisfied}{
 
 			$\{\mathbf{x}^{1}...\mathbf{x}^{m}\}$, $\{\mathbf{y}^{1}...\mathbf{y}^{m}\} \gets $  get a sample from $\mathbf{X}$ and $\mathbf{y}$ randomly
-			
 
 			calculate estimation of gradient $\hat{g} \gets \frac{1}{m}\sum_{i = 1}^{m}{L(f(\mathbf{x}^{i}; \theta ), \mathbf{y}^{i})}$		
+			
+			accumulate historical graidents $r \gets \rho r + (1- \rho) \hat{g} \odot \hat{g} $
+			
+			calculate step size $v \gets \beta v - \frac{\epsilon_{j}}{\sqrt{\zeta+r}} \odot \hat{g}$
 
-			
-			update velocity $v \gets \beta v - \epsilon_{j} \hat{g}$			
-			
-			update weights $\theta \gets \theta + v$
-									
+			update weights $\theta \gets \theta + v $
+
 		}
 				
 		$j \gets j + 1$ go to next epoch 
 	
 	}        
-
 
 
     \end{algorithm}    

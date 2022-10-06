@@ -18,7 +18,13 @@
     $\alpha$, decay rate of learning rate
     
     \textbf{Input:}
-    $\beta$, momentum rate
+    $\beta_1$, 1st order moment for plain gradients
+    
+    \textbf{Input:}
+    $\beta_2$, 2nd order moment for squared gradients
+    
+    \textbf{Input:}
+    $\zeta$, small constant to avoid zero division
     
     \textbf{Input:}
     $m$, minibatch size
@@ -28,9 +34,6 @@
     
     \textbf{Input:}
     $\theta$, initial weights
-    
-    \textbf{Input:}
-    $v$, initial velocity
      
     \textbf{Input:}
     $\mathbf{X}$, training dataset inputs
@@ -38,8 +41,18 @@
     \textbf{Input:}
     $\mathbf{y}$, training dataset targets
     
-	$j \gets 1$
-	
+    \textbf{Initialize:}
+    $s \gets 0$, accumulation variable for historical gradients
+    
+	\textbf{Initialize:}
+    $r \gets 0$, accumulation variable for historical squared gradients
+
+	\textbf{Initialize:}
+	$t \gets 0$, counter of each gradient update    
+    
+    \textbf{Initialize:}
+	$j \gets 1$, current epoch
+		
 	\While{$j \leq k$ }{
 			
 		update learning rate  $\epsilon_{j} \gets \epsilon_{0} + \alpha(\epsilon_{j-1}- \epsilon_{0})$		
@@ -48,21 +61,28 @@
 		\While{stopping criteria is not satisfied}{
 
 			$\{\mathbf{x}^{1}...\mathbf{x}^{m}\}$, $\{\mathbf{y}^{1}...\mathbf{y}^{m}\} \gets $  get a sample from $\mathbf{X}$ and $\mathbf{y}$ randomly
-			
 
 			calculate estimation of gradient $\hat{g} \gets \frac{1}{m}\sum_{i = 1}^{m}{L(f(\mathbf{x}^{i}; \theta ), \mathbf{y}^{i})}$		
 
+			accumulate historical graidents $s \gets \beta_1 s + (1- \beta_1) \hat{g}$
 			
-			update velocity $v \gets \beta v - \epsilon_{j} \hat{g}$			
+			accumulate historical squared graidents $r \gets \beta_2 r + (1- \beta_2) \hat{g} \odot \hat{g} $
+
+			$t \gets t + 1$		
 			
-			update weights $\theta \gets \theta + v$
-									
+			apply bias correction to 1st order momentum $\hat{s} = \frac{s}{1-\beta_{1}^{t}}$
+			
+			apply bias correction to 2nd order momentum $\hat{r} = \frac{r}{1-\beta_{2}^{t}}$
+			
+			calculate step size $\Delta \theta \gets - \epsilon_{j} \frac{\hat{s}}{\sqrt{\zeta+\hat{r}}}$
+
+			update weights $\theta \gets \theta + \Delta \theta $
+
 		}
 				
 		$j \gets j + 1$ go to next epoch 
 	
 	}        
-
 
 
     \end{algorithm}    

@@ -1,0 +1,101 @@
+@Misc{tensorflow2015-whitepaper,
+  author = {Mart\'{i}n~Abadi and Ashish~Agarwal and Paul~Barham and Eugene~Brevdo and Zhifeng~Chen and Craig~Citro and Greg~S.~Corrado and Andy~Davis and Jeffrey~Dean and Matthieu~Devin and Sanjay~Ghemawat and Ian~Goodfellow and Andrew~Harp and Geoffrey~Irving and Michael~Isard and Yangqing Jia and Rafal~Jozefowicz and Lukasz~Kaiser and Manjunath~Kudlur and Josh~Levenberg and Dandelion~Man\'{e} and Rajat~Monga and Sherry~Moore and Derek~Murray and Chris~Olah and Mike~Schuster and Jonathon~Shlens and Benoit~Steiner and Ilya~Sutskever and Kunal~Talwar and Paul~Tucker and Vincent~Vanhoucke and Vijay~Vasudevan and Fernanda~Vi\'{e}gas and Oriol~Vinyals and Pete~Warden and Martin~Wattenberg and Martin~Wicke and Yuan~Yu and Xiaoqiang~Zheng},
+  note   = {Software available from tensorflow.org},
+  title  = {{TensorFlow}: Large-Scale Machine Learning on Heterogeneous Systems},
+  year   = {2015},
+  url    = {https://www.tensorflow.org/},
+}
+
+@Article{Polyak1964,
+  author    = {B.T. Polyak},
+  journal   = {{USSR} Computational Mathematics and Mathematical Physics},
+  title     = {Some methods of speeding up the convergence of iteration methods},
+  year      = {1964},
+  month     = {jan},
+  number    = {5},
+  pages     = {1--17},
+  volume    = {4},
+  doi       = {10.1016/0041-5553(64)90137-5},
+  publisher = {Elsevier {BV}},
+}
+
+@Book{GoodBengCour16,
+  author    = {Ian J. Goodfellow and Yoshua Bengio and Aaron Courville},
+  publisher = {MIT Press},
+  title     = {Deep Learning},
+  year      = {2016},
+  address   = {Cambridge, MA, USA},
+  note      = {\url{http://www.deeplearningbook.org}},
+}
+
+@Misc{TDT2016,
+  author    = {{The Theano Development Team} and Al-Rfou, Rami and Alain, Guillaume and Almahairi, Amjad and Angermueller, Christof and Bahdanau, Dzmitry and Ballas, Nicolas and Bastien, Frédéric and Bayer, Justin and Belikov, Anatoly and Belopolsky, Alexander and Bengio, Yoshua and Bergeron, Arnaud and Bergstra, James and Bisson, Valentin and Snyder, Josh Bleecher and Bouchard, Nicolas and Boulanger-Lewandowski, Nicolas and Bouthillier, Xavier and de Brébisson, Alexandre and Breuleux, Olivier and Carrier, Pierre-Luc and Cho, Kyunghyun and Chorowski, Jan and Christiano, Paul and Cooijmans, Tim and Côté, Marc-Alexandre and Côté, Myriam and Courville, Aaron and Dauphin, Yann N. and Delalleau, Olivier and Demouth, Julien and Desjardins, Guillaume and Dieleman, Sander and Dinh, Laurent and Ducoffe, Mélanie and Dumoulin, Vincent and Kahou, Samira Ebrahimi and Erhan, Dumitru and Fan, Ziye and Firat, Orhan and Germain, Mathieu and Glorot, Xavier and Goodfellow, Ian and Graham, Matt and Gulcehre, Caglar and Hamel, Philippe and Harlouchet, Iban and Heng, Jean-Philippe and Hidasi, Balázs and Honari, Sina and Jain, Arjun and Jean, Sébastien and Jia, Kai and Korobov, Mikhail and Kulkarni, Vivek and Lamb, Alex and Lamblin, Pascal and Larsen, Eric and Laurent, César and Lee, Sean and Lefrancois, Simon and Lemieux, Simon and Léonard, Nicholas and Lin, Zhouhan and Livezey, Jesse A. and Lorenz, Cory and Lowin, Jeremiah and Ma, Qianli and Manzagol, Pierre-Antoine and Mastropietro, Olivier and McGibbon, Robert T. and Memisevic, Roland and van Merriënboer, Bart and Michalski, Vincent and Mirza, Mehdi and Orlandi, Alberto and Pal, Christopher and Pascanu, Razvan and Pezeshki, Mohammad and Raffel, Colin and Renshaw, Daniel and Rocklin, Matthew and Romero, Adriana and Roth, Markus and Sadowski, Peter and Salvatier, John and Savard, François and Schlüter, Jan and Schulman, John and Schwartz, Gabriel and Serban, Iulian Vlad and Serdyuk, Dmitriy and Shabanian, Samira and Simon, Étienne and Spieckermann, Sigurd and Subramanyam, S. Ramana and Sygnowski, Jakub and Tanguay, Jérémie and van Tulder, Gijs and Turian, Joseph and Urban, Sebastian and Vincent, Pascal and Visin, Francesco and de Vries, Harm and Warde-Farley, David and Webb, Dustin J. and Willson, Matthew and Xu, Kelvin and Xue, Lijun and Yao, Li and Zhang, Saizheng and Zhang, Ying},
+  title     = {Theano: A Python framework for fast computation of mathematical expressions},
+  year      = {2016},
+  copyright = {arXiv.org perpetual, non-exclusive license},
+  doi       = {10.48550/ARXIV.1605.02688},
+  keywords  = {Symbolic Computation (cs.SC), Machine Learning (cs.LG), Mathematical Software (cs.MS), FOS: Computer and information sciences},
+  publisher = {arXiv},
+}
+
+@InProceedings{Maas13rectifiernonlinearities,
+  author    = {Andrew L. Maas and Awni Y. Hannun and Andrew Y. Ng},
+  booktitle = {in ICML Workshop on Deep Learning for Audio, Speech and Language Processing},
+  title     = {Rectifier nonlinearities improve neural network acoustic models},
+  year      = {2013},
+}
+
+@Book{brownlee2018deep,
+  author    = {Brownlee, J.},
+  publisher = {Machine Learning Mastery},
+  title     = {Deep Learning for Time Series Forecasting: Predict the Future with MLPs, CNNs and LSTMs in Python},
+  year      = {2018},
+  url       = {https://books.google.lv/books?id=o5qnDwAAQBAJ},
+}
+
+@InProceedings{Collobert2011Torch7AM,
+  author    = {Ronan Collobert and Koray Kavukcuoglu and Cl{\'e}ment Farabet},
+  booktitle = {NIPS 2011},
+  title     = {Torch7: A Matlab-like Environment for Machine Learning},
+  year      = {2011},
+}
+
+@Misc{Neural Networks for Machine Learning Coursera Lesson,
+  author       = {Geoffrey Hinton},
+  howpublished = {Coursera},
+  note         = {Online video tutorials},
+  title        = {Neural Networks for Machine Learning},
+  year         = {2012},
+}
+
+@Article{10.5555/1953048.2021068,
+  author     = {Duchi, John and Hazan, Elad and Singer, Yoram},
+  journal    = {J. Mach. Learn. Res.},
+  title      = {Adaptive Subgradient Methods for Online Learning and Stochastic Optimization},
+  year       = {2011},
+  issn       = {1532-4435},
+  month      = {jul},
+  number     = {null},
+  pages      = {2121–2159},
+  volume     = {12},
+  abstract   = {We present a new family of subgradient methods that dynamically incorporate knowledge of the geometry of the data observed in earlier iterations to perform more informative gradient-based learning. Metaphorically, the adaptation allows us to find needles in haystacks in the form of very predictive but rarely seen features. Our paradigm stems from recent advances in stochastic optimization and online learning which employ proximal functions to control the gradient steps of the algorithm. We describe and analyze an apparatus for adaptively modifying the proximal function, which significantly simplifies setting a learning rate and results in regret guarantees that are provably as good as the best proximal function that can be chosen in hindsight. We give several efficient algorithms for empirical risk minimization problems with common and important regularization functions and domain constraints. We experimentally study our theoretical analysis and show that adaptive subgradient methods outperform state-of-the-art, yet non-adaptive, subgradient algorithms.},
+  issue_date = {2/1/2011},
+  numpages   = {39},
+  publisher  = {JMLR.org},
+}
+
+@Misc{kingma2014method,
+  author      = {Kingma, Diederik P. and Ba, Jimmy},
+  note        = {cite arxiv:1412.6980Comment: Published as a conference paper at the 3rd International Conference for Learning Representations, San Diego, 2015},
+  title       = {Adam: A Method for Stochastic Optimization},
+  year        = {2014},
+  abstract    = {We introduce Adam, an algorithm for first-order gradient-based optimization
+of stochastic objective functions, based on adaptive estimates of lower-order
+moments. The method is straightforward to implement, is computationally
+efficient, has little memory requirements, is invariant to diagonal rescaling
+of the gradients, and is well suited for problems that are large in terms of
+data and/or parameters. The method is also appropriate for non-stationary
+objectives and problems with very noisy and/or sparse gradients. The
+hyper-parameters have intuitive interpretations and typically require little
+tuning. Some connections to related algorithms, on which Adam was inspired, are
+discus
