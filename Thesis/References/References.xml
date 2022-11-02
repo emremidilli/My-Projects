@@ -1,50 +1,78 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <b:Sources xmlns:b="http://schemas.openxmlformats.org/officeDocument/2006/bibliography" xmlns="http://schemas.openxmlformats.org/officeDocument/2006/bibliography" SelectedStyle="">
     <b:Source>
-        <b:Year>2014</b:Year>
-        <b:BIBTEX_Entry>misc</b:BIBTEX_Entry>
-        <b:Comments>cite arxiv:1412.6980Comment: Published as a conference paper at the 3rd International Conference for Learning Representations, San Diego, 2015</b:Comments>
-        <b:SourceType>Misc</b:SourceType>
-        <b:Title>Adam: A Method for Stochastic Optimization</b:Title>
-        <b:Tag>kingma2014method</b:Tag>
-        <b:BIBTEX_Abstract>We introduce Adam, an algorithm for first-order gradient-based optimization of stochastic objective functions, based on adaptive estimates of lower-order moments. The method is straightforward to implement, is computationally efficient, has little memory requirements, is invariant to diagonal rescaling of the gradients, and is well suited for problems that are large in terms of data and/or parameters. The method is also appropriate for non-stationary objectives and problems with very noisy and/or sparse gradients. The hyper-parameters have intuitive interpretations and typically require little tuning. Some connections to related algorithms, on which Adam was inspired, are discussed. We also analyze the theoretical convergence properties of the algorithm and provide a regret bound on the convergence rate that is comparable to the best known results under the online convex optimization framework. Empirical results demonstrate that Adam works well in practice and compares favorably to other stochastic optimization methods. Finally, we discuss AdaMax, a variant of Adam based on the infinity norm.</b:BIBTEX_Abstract>
-        <b:URL>http://arxiv.org/abs/1412.6980</b:URL>
+        <b:Year>2006</b:Year>
+        <b:Volume>112</b:Volume>
+        <b:BIBTEX_Entry>article</b:BIBTEX_Entry>
+        <b:SourceType>JournalArticle</b:SourceType>
+        <b:Title>Optimal Jacobian accumulation is NP-complete</b:Title>
+        <b:Publisher>Springer Science and Business Media LLC</b:Publisher>
+        <b:Tag>Naumann2006</b:Tag>
+        <b:DOI>10.1007/s10107-006-0042-z</b:DOI>
         <b:Author>
             <b:Author>
                 <b:NameList>
                     <b:Person>
-                        <b:Last>Kingma</b:Last>
-                        <b:Middle>P.</b:Middle>
-                        <b:First>Diederik</b:First>
-                    </b:Person>
-                    <b:Person>
-                        <b:Last>Ba</b:Last>
-                        <b:First>Jimmy</b:First>
+                        <b:Last>Naumann</b:Last>
+                        <b:First>Uwe</b:First>
                     </b:Person>
                 </b:NameList>
             </b:Author>
         </b:Author>
-        <b:PublicationTitle>Adam: A Method for Stochastic Optimization</b:PublicationTitle>
+        <b:Pages>427–441</b:Pages>
+        <b:Month>October</b:Month>
+        <b:JournalName>Mathematical Programming</b:JournalName>
+        <b:Number>2</b:Number>
     </b:Source>
     <b:Source>
-        <b:Year>2012</b:Year>
-        <b:BIBTEX_Entry>misc</b:BIBTEX_Entry>
-        <b:Comments>Online video tutorials</b:Comments>
-        <b:SourceType>Misc</b:SourceType>
-        <b:Title>Neural Networks for Machine Learning</b:Title>
-        <b:Tag>NeuralNetworksforMachineLearningCourseraLesson</b:Tag>
-        <b:BIBTEX_HowPublished>Coursera</b:BIBTEX_HowPublished>
+        <b:Year>2016</b:Year>
+        <b:BIBTEX_Entry>book</b:BIBTEX_Entry>
+        <b:Comments>\url{http://www.deeplearningbook.org}</b:Comments>
+        <b:SourceType>Book</b:SourceType>
+        <b:Title>Deep Learning</b:Title>
+        <b:Publisher>MIT Press</b:Publisher>
+        <b:Tag>GoodBengCour16</b:Tag>
         <b:Author>
             <b:Author>
                 <b:NameList>
                     <b:Person>
-                        <b:Last>Hinton</b:Last>
-                        <b:First>Geoffrey</b:First>
+                        <b:Last>Goodfellow</b:Last>
+                        <b:Middle>J.</b:Middle>
+                        <b:First>Ian</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Bengio</b:Last>
+                        <b:First>Yoshua</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Courville</b:Last>
+                        <b:First>Aaron</b:First>
                     </b:Person>
                 </b:NameList>
             </b:Author>
         </b:Author>
-        <b:PublicationTitle>Neural Networks for Machine Learning</b:PublicationTitle>
+        <b:City>Cambridge</b:City>
+        <b:StateProvince>MA</b:StateProvince>
+        <b:CountryRegion>USA</b:CountryRegion>
+    </b:Source>
+    <b:Source>
+        <b:Year>2018</b:Year>
+        <b:BIBTEX_Entry>book</b:BIBTEX_Entry>
+        <b:SourceType>Book</b:SourceType>
+        <b:Title>Deep Learning for Time Series Forecasting: Predict the Future with MLPs, CNNs and LSTMs in Python</b:Title>
+        <b:Publisher>Machine Learning Mastery</b:Publisher>
+        <b:Tag>brownlee2018deep</b:Tag>
+        <b:URL>https://books.google.lv/books?id=o5qnDwAAQBAJ</b:URL>
+        <b:Author>
+            <b:Author>
+                <b:NameList>
+                    <b:Person>
+                        <b:Last>Brownlee</b:Last>
+                        <b:First>J.</b:First>
+                    </b:Person>
+                </b:NameList>
+            </b:Author>
+        </b:Author>
     </b:Source>
     <b:Source>
         <b:Year>2016</b:Year>
@@ -526,6 +554,131 @@
         <b:PublicationTitle>Theano: A Python framework for fast computation of mathematical expressions</b:PublicationTitle>
     </b:Source>
     <b:Source>
+        <b:Year>2012</b:Year>
+        <b:BIBTEX_Entry>misc</b:BIBTEX_Entry>
+        <b:Comments>Online video tutorials</b:Comments>
+        <b:SourceType>Misc</b:SourceType>
+        <b:Title>Neural Networks for Machine Learning</b:Title>
+        <b:BIBTEX_HowPublished>Coursera</b:BIBTEX_HowPublished>
+        <b:Tag>NeuralNetworksforMachineLearningCourseraLesson</b:Tag>
+        <b:Author>
+            <b:Author>
+                <b:NameList>
+                    <b:Person>
+                        <b:Last>Hinton</b:Last>
+                        <b:First>Geoffrey</b:First>
+                    </b:Person>
+                </b:NameList>
+            </b:Author>
+        </b:Author>
+        <b:PublicationTitle>Neural Networks for Machine Learning</b:PublicationTitle>
+    </b:Source>
+    <b:Source>
+        <b:Year>1996</b:Year>
+        <b:Volume>58</b:Volume>
+        <b:BIBTEX_Entry>article</b:BIBTEX_Entry>
+        <b:SourceType>JournalArticle</b:SourceType>
+        <b:Title>Regression Shrinkage and Selection via the Lasso</b:Title>
+        <b:Tag>tibshirani96regression</b:Tag>
+        <b:BIBTEX_KeyWords>imported</b:BIBTEX_KeyWords>
+        <b:Author>
+            <b:Author>
+                <b:NameList>
+                    <b:Person>
+                        <b:Last>Tibshirani</b:Last>
+                        <b:First>R.</b:First>
+                    </b:Person>
+                </b:NameList>
+            </b:Author>
+        </b:Author>
+        <b:Pages>267-288</b:Pages>
+        <b:JournalName>Journal of the Royal Statistical Society (Series B)</b:JournalName>
+    </b:Source>
+    <b:Source>
+        <b:Year>1964</b:Year>
+        <b:Volume>4</b:Volume>
+        <b:BIBTEX_Entry>article</b:BIBTEX_Entry>
+        <b:SourceType>JournalArticle</b:SourceType>
+        <b:Title>Some methods of speeding up the convergence of iteration methods</b:Title>
+        <b:Publisher>Elsevier BV</b:Publisher>
+        <b:Tag>Polyak1964</b:Tag>
+        <b:DOI>10.1016/0041-5553(64)90137-5</b:DOI>
+        <b:Author>
+            <b:Author>
+                <b:NameList>
+                    <b:Person>
+                        <b:Last>Polyak</b:Last>
+                        <b:Middle>T.</b:Middle>
+                        <b:First>B.</b:First>
+                    </b:Person>
+                </b:NameList>
+            </b:Author>
+        </b:Author>
+        <b:Pages>1–17</b:Pages>
+        <b:Month>January</b:Month>
+        <b:JournalName>USSR Computational Mathematics and Mathematical Physics</b:JournalName>
+        <b:Number>5</b:Number>
+    </b:Source>
+    <b:Source>
+        <b:Year>2011</b:Year>
+        <b:Volume>12</b:Volume>
+        <b:BIBTEX_Entry>article</b:BIBTEX_Entry>
+        <b:SourceType>JournalArticle</b:SourceType>
+        <b:Title>Adaptive Subgradient Methods for Online Learning and Stochastic Optimization</b:Title>
+        <b:Tag>10.5555/1953048.2021068</b:Tag>
+        <b:Publisher>JMLR.org</b:Publisher>
+        <b:BIBTEX_Abstract>We present a new family of subgradient methods that dynamically incorporate knowledge of the geometry of the data observed in earlier iterations to perform more informative gradient-based learning. Metaphorically, the adaptation allows us to find needles in haystacks in the form of very predictive but rarely seen features. Our paradigm stems from recent advances in stochastic optimization and online learning which employ proximal functions to control the gradient steps of the algorithm. We describe and analyze an apparatus for adaptively modifying the proximal function, which significantly simplifies setting a learning rate and results in regret guarantees that are provably as good as the best proximal function that can be chosen in hindsight. We give several efficient algorithms for empirical risk minimization problems with common and important regularization functions and domain constraints. We experimentally study our theoretical analysis and show that adaptive subgradient methods outperform state-of-the-art, yet non-adaptive, subgradient algorithms.</b:BIBTEX_Abstract>
+        <b:Author>
+            <b:Author>
+                <b:NameList>
+                    <b:Person>
+                        <b:Last>Duchi</b:Last>
+                        <b:First>John</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Hazan</b:Last>
+                        <b:First>Elad</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Singer</b:Last>
+                        <b:First>Yoram</b:First>
+                    </b:Person>
+                </b:NameList>
+            </b:Author>
+        </b:Author>
+        <b:Pages>2121–2159</b:Pages>
+        <b:Month>July</b:Month>
+        <b:JournalName>J. Mach. Learn. Res.</b:JournalName>
+        <b:Number>null</b:Number>
+        <b:StandardNumber> ISSN: 1532-4435</b:StandardNumber>
+    </b:Source>
+    <b:Source>
+        <b:Year>2014</b:Year>
+        <b:BIBTEX_Entry>misc</b:BIBTEX_Entry>
+        <b:Comments>cite arxiv:1412.6980Comment: Published as a conference paper at the 3rd International Conference for Learning Representations, San Diego, 2015</b:Comments>
+        <b:SourceType>Misc</b:SourceType>
+        <b:Title>Adam: A Method for Stochastic Optimization</b:Title>
+        <b:Tag>kingma2014method</b:Tag>
+        <b:BIBTEX_Abstract>We introduce Adam, an algorithm for first-order gradient-based optimization of stochastic objective functions, based on adaptive estimates of lower-order moments. The method is straightforward to implement, is computationally efficient, has little memory requirements, is invariant to diagonal rescaling of the gradients, and is well suited for problems that are large in terms of data and/or parameters. The method is also appropriate for non-stationary objectives and problems with very noisy and/or sparse gradients. The hyper-parameters have intuitive interpretations and typically require little tuning. Some connections to related algorithms, on which Adam was inspired, are discussed. We also analyze the theoretical convergence properties of the algorithm and provide a regret bound on the convergence rate that is comparable to the best known results under the online convex optimization framework. Empirical results demonstrate that Adam works well in practice and compares favorably to other stochastic optimization methods. Finally, we discuss AdaMax, a variant of Adam based on the infinity norm.</b:BIBTEX_Abstract>
+        <b:URL>http://arxiv.org/abs/1412.6980</b:URL>
+        <b:Author>
+            <b:Author>
+                <b:NameList>
+                    <b:Person>
+                        <b:Last>Kingma</b:Last>
+                        <b:Middle>P.</b:Middle>
+                        <b:First>Diederik</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Ba</b:Last>
+                        <b:First>Jimmy</b:First>
+                    </b:Person>
+                </b:NameList>
+            </b:Author>
+        </b:Author>
+        <b:PublicationTitle>Adam: A Method for Stochastic Optimization</b:PublicationTitle>
+    </b:Source>
+    <b:Source>
         <b:Year>2015</b:Year>
         <b:BIBTEX_Entry>misc</b:BIBTEX_Entry>
         <b:Comments>Software available from tensorflow.org</b:Comments>
@@ -703,130 +856,48 @@
         <b:PublicationTitle>TensorFlow: Large-Scale Machine Learning on Heterogeneous Systems</b:PublicationTitle>
     </b:Source>
     <b:Source>
-        <b:Year>1964</b:Year>
-        <b:Volume>4</b:Volume>
-        <b:BIBTEX_Entry>article</b:BIBTEX_Entry>
-        <b:SourceType>JournalArticle</b:SourceType>
-        <b:Title>Some methods of speeding up the convergence of iteration methods</b:Title>
-        <b:Publisher>Elsevier BV</b:Publisher>
-        <b:Tag>Polyak1964</b:Tag>
-        <b:DOI>10.1016/0041-5553(64)90137-5</b:DOI>
+        <b:Year>2014</b:Year>
+        <b:BIBTEX_Entry>inproceedings</b:BIBTEX_Entry>
+        <b:SourceType>ConferenceProceedings</b:SourceType>
+        <b:Title>Intriguing properties of neural networks</b:Title>
+        <b:Tag>42503</b:Tag>
+        <b:BookTitle>International Conference on Learning Representations</b:BookTitle>
+        <b:URL>http://arxiv.org/abs/1312.6199</b:URL>
         <b:Author>
             <b:Author>
                 <b:NameList>
                     <b:Person>
-                        <b:Last>Polyak</b:Last>
-                        <b:Middle>T.</b:Middle>
-                        <b:First>B.</b:First>
+                        <b:Last>Szegedy</b:Last>
+                        <b:First>Christian</b:First>
                     </b:Person>
-                </b:NameList>
-            </b:Author>
-        </b:Author>
-        <b:Pages>1–17</b:Pages>
-        <b:Month>January</b:Month>
-        <b:JournalName>USSR Computational Mathematics and Mathematical Physics</b:JournalName>
-        <b:Number>5</b:Number>
-    </b:Source>
-    <b:Source>
-        <b:Year>2016</b:Year>
-        <b:BIBTEX_Entry>book</b:BIBTEX_Entry>
-        <b:Comments>\url{http://www.deeplearningbook.org}</b:Comments>
-        <b:SourceType>Book</b:SourceType>
-        <b:Title>Deep Learning</b:Title>
-        <b:Publisher>MIT Press</b:Publisher>
-        <b:Tag>GoodBengCour16</b:Tag>
-        <b:Author>
-            <b:Author>
-                <b:NameList>
+                    <b:Person>
+                        <b:Last>Zaremba</b:Last>
+                        <b:First>Wojciech</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Sutskever</b:Last>
+                        <b:First>Ilya</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Bruna</b:Last>
+                        <b:First>Joan</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Erhan</b:Last>
+                        <b:First>Dumitru</b:First>
+                    </b:Person>
                     <b:Person>
                         <b:Last>Goodfellow</b:Last>
-                        <b:Middle>J.</b:Middle>
                         <b:First>Ian</b:First>
                     </b:Person>
                     <b:Person>
-                        <b:Last>Bengio</b:Last>
-                        <b:First>Yoshua</b:First>
-                    </b:Person>
-                    <b:Person>
-                        <b:Last>Courville</b:Last>
-                        <b:First>Aaron</b:First>
+                        <b:Last>Fergus</b:Last>
+                        <b:First>Rob</b:First>
                     </b:Person>
                 </b:NameList>
             </b:Author>
         </b:Author>
-        <b:City>Cambridge</b:City>
-        <b:StateProvince>MA</b:StateProvince>
-        <b:CountryRegion>USA</b:CountryRegion>
-    </b:Source>
-    <b:Source>
-        <b:Year>2018</b:Year>
-        <b:BIBTEX_Entry>book</b:BIBTEX_Entry>
-        <b:SourceType>Book</b:SourceType>
-        <b:Title>Deep Learning for Time Series Forecasting: Predict the Future with MLPs, CNNs and LSTMs in Python</b:Title>
-        <b:Publisher>Machine Learning Mastery</b:Publisher>
-        <b:Tag>brownlee2018deep</b:Tag>
-        <b:URL>https://books.google.lv/books?id=o5qnDwAAQBAJ</b:URL>
-        <b:Author>
-            <b:Author>
-                <b:NameList>
-                    <b:Person>
-                        <b:Last>Brownlee</b:Last>
-                        <b:First>J.</b:First>
-                    </b:Person>
-                </b:NameList>
-            </b:Author>
-        </b:Author>
-    </b:Source>
-    <b:Source>
-        <b:Year>2011</b:Year>
-        <b:BIBTEX_Entry>inproceedings</b:BIBTEX_Entry>
-        <b:SourceType>ConferenceProceedings</b:SourceType>
-        <b:Title>Torch7: A Matlab-like Environment for Machine Learning</b:Title>
-        <b:Tag>Collobert2011Torch7AM</b:Tag>
-        <b:BookTitle>NIPS 2011</b:BookTitle>
-        <b:Author>
-            <b:Author>
-                <b:NameList>
-                    <b:Person>
-                        <b:Last>Collobert</b:Last>
-                        <b:First>Ronan</b:First>
-                    </b:Person>
-                    <b:Person>
-                        <b:Last>Kavukcuoglu</b:Last>
-                        <b:First>Koray</b:First>
-                    </b:Person>
-                    <b:Person>
-                        <b:Last>Farabet</b:Last>
-                        <b:First>Clément</b:First>
-                    </b:Person>
-                </b:NameList>
-            </b:Author>
-        </b:Author>
-        <b:ConferenceName>NIPS 2011</b:ConferenceName>
-    </b:Source>
-    <b:Source>
-        <b:Year>2006</b:Year>
-        <b:Volume>112</b:Volume>
-        <b:BIBTEX_Entry>article</b:BIBTEX_Entry>
-        <b:SourceType>JournalArticle</b:SourceType>
-        <b:Title>Optimal Jacobian accumulation is NP-complete</b:Title>
-        <b:Tag>Naumann2006</b:Tag>
-        <b:Publisher>Springer Science and Business Media LLC</b:Publisher>
-        <b:DOI>10.1007/s10107-006-0042-z</b:DOI>
-        <b:Author>
-            <b:Author>
-                <b:NameList>
-                    <b:Person>
-                        <b:Last>Naumann</b:Last>
-                        <b:First>Uwe</b:First>
-                    </b:Person>
-                </b:NameList>
-            </b:Author>
-        </b:Author>
-        <b:Pages>427–441</b:Pages>
-        <b:Month>October</b:Month>
-        <b:JournalName>Mathematical Programming</b:JournalName>
-        <b:Number>2</b:Number>
+        <b:ConferenceName>International Conference on Learning Representations</b:ConferenceName>
     </b:Source>
     <b:Source>
         <b:Year>2013</b:Year>
@@ -860,35 +931,62 @@
     </b:Source>
     <b:Source>
         <b:Year>2011</b:Year>
-        <b:Volume>12</b:Volume>
-        <b:BIBTEX_Entry>article</b:BIBTEX_Entry>
-        <b:SourceType>JournalArticle</b:SourceType>
-        <b:Title>Adaptive Subgradient Methods for Online Learning and Stochastic Optimization</b:Title>
-        <b:Tag>10.5555/1953048.2021068</b:Tag>
-        <b:Publisher>JMLR.org</b:Publisher>
-        <b:BIBTEX_Abstract>We present a new family of subgradient methods that dynamically incorporate knowledge of the geometry of the data observed in earlier iterations to perform more informative gradient-based learning. Metaphorically, the adaptation allows us to find needles in haystacks in the form of very predictive but rarely seen features. Our paradigm stems from recent advances in stochastic optimization and online learning which employ proximal functions to control the gradient steps of the algorithm. We describe and analyze an apparatus for adaptively modifying the proximal function, which significantly simplifies setting a learning rate and results in regret guarantees that are provably as good as the best proximal function that can be chosen in hindsight. We give several efficient algorithms for empirical risk minimization problems with common and important regularization functions and domain constraints. We experimentally study our theoretical analysis and show that adaptive subgradient methods outperform state-of-the-art, yet non-adaptive, subgradient algorithms.</b:BIBTEX_Abstract>
+        <b:BIBTEX_Entry>inproceedings</b:BIBTEX_Entry>
+        <b:SourceType>ConferenceProceedings</b:SourceType>
+        <b:Title>Torch7: A Matlab-like Environment for Machine Learning</b:Title>
+        <b:Tag>Collobert2011Torch7AM</b:Tag>
+        <b:BookTitle>NIPS 2011</b:BookTitle>
         <b:Author>
             <b:Author>
                 <b:NameList>
                     <b:Person>
-                        <b:Last>Duchi</b:Last>
-                        <b:First>John</b:First>
+                        <b:Last>Collobert</b:Last>
+                        <b:First>Ronan</b:First>
                     </b:Person>
                     <b:Person>
-                        <b:Last>Hazan</b:Last>
-                        <b:First>Elad</b:First>
+                        <b:Last>Kavukcuoglu</b:Last>
+                        <b:First>Koray</b:First>
                     </b:Person>
                     <b:Person>
-                        <b:Last>Singer</b:Last>
-                        <b:First>Yoram</b:First>
+                        <b:Last>Farabet</b:Last>
+                        <b:First>Clément</b:First>
                     </b:Person>
                 </b:NameList>
             </b:Author>
         </b:Author>
-        <b:Pages>2121–2159</b:Pages>
-        <b:Month>July</b:Month>
-        <b:JournalName>J. Mach. Learn. Res.</b:JournalName>
-        <b:Number>null</b:Number>
-        <b:StandardNumber> ISSN: 1532-4435</b:StandardNumber>
+        <b:ConferenceName>NIPS 2011</b:ConferenceName>
+    </b:Source>
+    <b:Source>
+        <b:Year>2013</b:Year>
+        <b:BIBTEX_Entry>conference</b:BIBTEX_Entry>
+        <b:SourceType>ConferenceProceedings</b:SourceType>
+        <b:Title>Rectifier Nonlinearities Improve Neural Network Acoustic Models</b:Title>
+        <b:Tag>maasrectifier</b:Tag>
+        <b:BookTitle>Proceedings of the International Conference on Machine Learning</b:BookTitle>
+        <b:Author>
+            <b:Author>
+                <b:NameList>
+                    <b:Person>
+                        <b:Last>Maas</b:Last>
+                        <b:Middle>L.</b:Middle>
+                        <b:First>A.</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Hannun</b:Last>
+                        <b:Middle>Y.</b:Middle>
+                        <b:First>A.</b:First>
+                    </b:Person>
+                    <b:Person>
+                        <b:Last>Ng</b:Last>
+                        <b:Middle>Y.</b:Middle>
+                        <b:First>A.</b:First>
+                    </b:Person>
+                </b:NameList>
+            </b:Author>
+        </b:Author>
+        <b:ConferenceName>Proceedings of the International Conference on Machine Learning</b:ConferenceName>
+        <b:City>Atlanta</b:City>
+        <b:StateProvince>Georgia</b:StateProvince>
+        <b:CountryRegion/>
     </b:Source>
 </b:Sources>

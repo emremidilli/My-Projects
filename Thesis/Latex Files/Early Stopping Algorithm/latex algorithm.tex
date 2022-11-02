@@ -1,0 +1,77 @@
+\documentclass{article}
+\usepackage[linesnumbered, ruled, vlined]{algorithm2e}
+\usepackage{algpseudocode}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+
+
+\begin{document}
+
+    \pagenumbering{gobble}
+    \setlength{\interspacetitleruled}{-.4pt}
+    \begin{algorithm}
+
+    
+    \textbf{Input:}
+    $n$, steps between evaluations
+    
+    \textbf{Input:}
+    $p$, patience
+    
+    \textbf{Input:}
+    $\theta_{0}$, initial parameters
+    
+    \textbf{Initialize:}
+    $\theta \gets \theta_{0}$ counter to store the step number
+    
+    \textbf{Initialize:}
+    $i \gets 0$ counter to store the step number
+    
+    \textbf{Initialize:}
+    $j \gets 0$ counter for patience
+
+    \textbf{Initialize:}
+    $v \gets \infty$ variable that stores the best validation loss
+    
+    \textbf{Initialize:}
+    $\theta^{*} \gets \theta$ variable that stores best parameter
+    
+    \textbf{Initialize:}
+    $i^{*} \gets i$ variable that stores best step number
+    
+	\While{$j < p$ }{
+
+		Train $\theta$ for $n$ steps	
+		
+		$i \gets i + n$
+		
+		$v^{'} \gets J(\theta; X^{validation},Y^{validation})$ validation set loss
+		
+		\If{$v^{'} < v$}{
+		
+			$j \gets 0$
+			
+			$\theta^{*} \gets \theta$
+			
+			$i^{*} \gets i$
+			
+			$v \gets v^{'}$
+		
+		}
+		\Else{
+
+			$j \gets j + 1$			
+			
+		}
+	
+	}     
+	
+    \textbf{return }
+    $\theta^{*}$ best parameters from the time step $i^{*}$
+
+
+    \end{algorithm}    
+    
+\end{document}
+
+
+

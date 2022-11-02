@@ -113,4 +113,42 @@ a variant of Adam based on the infinity norm.},
   url         = {http://arxiv.org/abs/1412.6980},
 }
 
+@Article{Naumann2006,
+  author    = {Uwe Naumann},
+  journal   = {Mathematical Programming},
+  title     = {Optimal Jacobian accumulation is {NP}-complete},
+  year      = {2006},
+  month     = {oct},
+  number    = {2},
+  pages     = {427--441},
+  volume    = {112},
+  doi       = {10.1007/s10107-006-0042-z},
+  publisher = {Springer Science and Business Media {LLC}},
+}
+
+@Conference{maasrectifier,
+  author        = {Maas, A.L. and Hannun, A.Y. and Ng, A.Y.},
+  booktitle     = {Proceedings of the International Conference on Machine Learning},
+  title         = {Rectifier Nonlinearities Improve Neural Network Acoustic Models},
+  year          = {2013},
+  address       = {Atlanta, Georgia},
+  date-added    = {2013-12-03 21:52:00 +0000},
+  date-modified = {2013-12-12 19:00:23 +0000},
+}
+
+@Article{tibshirani96regression,
+  author    = {Tibshirani, R.},
+  journal   = {Journal of the Royal Statistical Society (Series B)},
+  title     = {Regression Shrinkage and Selection via the Lasso},
+  year      = {1996},
+  pages     = {267-288},
+  volume    = {58},
+  added-at  = {2009-04-04T18:01:35.000+0200},
+  biburl    = {https://www.bibsonomy.org/bibtex/290e648276aa6cd3c601e7c0a54366233/dieudonnew},
+  interhash = {334927808d42a9a6bf8eae717fed41b3},
+  intrahash = {90e648276aa6cd3c601e7c0a54366233},
+  keywords  = {imported},
+  timestamp = {2009-04-04T18:01:35.000+0200},
+}
+
 @Comment{jabref-meta: databaseType:bibtex;}
