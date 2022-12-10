@@ -1,4 +1,0 @@
-Score,Value
-Regression Score,0.0421275606457967
-Coefficients,"[2.0815509757244253, 3.959844410102048]"
-Feature Names,"['Batch Size', 'Number of Hidden Neurons']"
