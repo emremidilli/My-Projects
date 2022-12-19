@@ -12,3 +12,4 @@ LEARNING MATERIALS
 * https://embracingtherandom.com/machine-learning/tensorflow/ranking/deep-learning/learning-to-rank-part-2/#where-do-probabilities-fit-into-listnet
 * https://www.topbots.com/attention-for-time-series-forecasting-and-classification/
 * https://medium.com/@judopro/using-machine-learning-to-programmatically-determine-stock-support-and-resistance-levels-9bb70777cf8e  K-Means Algorithm used to identify the support and resistence levels.
+* https://towardsdatascience.com/time-series-bootstrap-in-the-age-of-deep-learning-b98aa2aa32c4
