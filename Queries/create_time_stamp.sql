@@ -1,0 +1,25 @@
+USE DB_TIME_SERIES
+GO
+
+DROP TABLE IF EXISTS TBL_TIME_STAMPS 
+GO
+
+DECLARE @start_date DATETIME = '2020-01-01 00:00';
+DECLARE @end_date DATETIME = '2022-11-01 00:00';
+DECLARE @iFrom INT = 0;
+DECLARE @iTo INT = 1;
+
+
+WITH AllTimes
+          AS ( SELECT   @start_date AS [TIME_STAMP]
+               UNION ALL
+               SELECT   DATEADD(MINUTE, 1, [TIME_STAMP])
+               FROM     AllTimes
+               WHERE    [TIME_STAMP] < @end_date )
+	SELECT 
+	t.TIME_STAMP ,
+	DATEADD(HOUR,@iFrom, t.TIME_STAMP) AS FROM_TIME_STAMP,   
+	DATEADD(HOUR,@iTo, t.TIME_STAMP) AS TO_TIME_STAMP
+	INTO TBL_TIME_STAMPS FROM  AllTimes t WHERE DATEPART(weekday, [TIME_STAMP]) not in (1,7)  OPTION (MAXRECURSION 0)
+
+
