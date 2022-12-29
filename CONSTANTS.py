@@ -16,6 +16,5 @@ NR_OF_ENSEMBLED_MODELS = 8
 
 RANDOM_STATE = 42
 DATA_AUGMENTATION_BASE_MODEL_PATH = r'Models\Data_Augmentaiton\Base_Model'
-
-
 PREPROCESSED_DATA_PATH = r'C:\Users\yunus\Desktop\Preprocessed Data'
+FEATURE_ENGINEERED_DATA_PATH = r'C:\Users\yunus\Desktop\Feature Engineered Data'
