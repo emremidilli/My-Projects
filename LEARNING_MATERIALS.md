@@ -1,5 +1,3 @@
-<B>LEARNING MATERIALS</B>
-
 # VARIATIONAL ENCODER
 * https://atcold.github.io/pytorch-Deep-Learning/en/week11/11-3/
 
