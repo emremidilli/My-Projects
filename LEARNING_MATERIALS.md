@@ -42,6 +42,9 @@
 # N-BEATS
 * https://www.kaggle.com/code/gatandubuc/forecast-with-n-beats-interpretable-model
 
+# N-HITS
+* https://towardsdatascience.com/all-about-n-hits-the-latest-breakthrough-in-time-series-forecasting-a8ddcb27b0d5#:~:text=N%2DHiTS%20stands%20for%20Neural,time%20series%20at%20different%20rates.
+
 # TEMPORAL CONVOLUTIONAL NEURAL NETWORKS
 * https://towardsdatascience.com/temporal-convolutional-networks-the-next-revolution-for-time-series-8990af826567
 
