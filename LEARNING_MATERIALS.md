@@ -30,6 +30,8 @@
 # BERT
 * https://github.com/google-research/bert
 * http://jalammar.github.io/illustrated-bert/
+* https://www.youtube.com/watch?v=EOmd5sUUA_A&list=PLgtf4d9zHHO8p_zDKstvqvtkv80jhHxoE&index=6
+
 
 # TRANSFORMER
 * https://jalammar.github.io/illustrated-transformer/
@@ -38,6 +40,8 @@
 * https://www.topbots.com/attention-for-time-series-forecasting-and-classification/
 * https://towardsdatascience.com/transformers-141e32e69591
 * https://towardsdatascience.com/stock-predictions-with-state-of-the-art-transformer-and-time-embeddings-3a4485237de6
+* https://www.youtube.com/watch?v=FC8PziPmxnQ
+* https://www.youtube.com/watch?v=J4H6A4-dvhE
 
 # N-BEATS
 * https://www.kaggle.com/code/gatandubuc/forecast-with-n-beats-interpretable-model
