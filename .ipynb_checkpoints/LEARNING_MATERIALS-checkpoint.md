@@ -42,6 +42,11 @@
 * https://towardsdatascience.com/stock-predictions-with-state-of-the-art-transformer-and-time-embeddings-3a4485237de6
 * https://www.youtube.com/watch?v=FC8PziPmxnQ
 * https://www.youtube.com/watch?v=J4H6A4-dvhE
+* https://www.youtube.com/watch?v=48gBPL7aHJY
+* https://www.youtube.com/watch?v=dichIcUZfOw&t=0s
+* https://www.youtube.com/watch?v=mMa2PmYJlCo&t=14s
+* https://www.youtube.com/watch?v=gJ9kaJsE78k&t=172s
+
 
 # N-BEATS
 * https://www.kaggle.com/code/gatandubuc/forecast-with-n-beats-interpretable-model
