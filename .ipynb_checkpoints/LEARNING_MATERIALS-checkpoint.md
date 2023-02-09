@@ -31,6 +31,7 @@
 * https://github.com/google-research/bert
 * http://jalammar.github.io/illustrated-bert/
 * https://www.youtube.com/watch?v=EOmd5sUUA_A&list=PLgtf4d9zHHO8p_zDKstvqvtkv80jhHxoE&index=6
+* https://keras.io/examples/nlp/masked_language_modeling/
 
 
 # TRANSFORMER
@@ -46,6 +47,7 @@
 * https://www.youtube.com/watch?v=dichIcUZfOw&t=0s
 * https://www.youtube.com/watch?v=mMa2PmYJlCo&t=14s
 * https://www.youtube.com/watch?v=gJ9kaJsE78k&t=172s
+* https://www.tensorflow.org/text/tutorials/transformer
 
 
 # N-BEATS
