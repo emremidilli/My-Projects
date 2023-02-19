@@ -24,6 +24,14 @@ class PositionEncoder(tf.Module):
 
         return y
 
+    
+    def get_config(self):
+        return {"input_dim": self.input_dim, "output_dim": self.output_dim}
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+    
         
     def get_pos_encoding_matrix(self, max_len,d_emb ):
         pos_enc = np.array(

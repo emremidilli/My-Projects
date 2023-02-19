@@ -2,6 +2,7 @@ import tensorflow as tf
 from PositionEncoder import PositionEncoder 
 from TransformerEncoder import TransformerEncoder 
 
+
 class BERT(tf.keras.Model):
     def __init__(
         self, 
@@ -15,12 +16,12 @@ class BERT(tf.keras.Model):
     ):
         super(BERT, self).__init__()
  
-        self.mlm_input_shape = mlm_input_shape, 
-        self.nsp_input_shape = nsp_input_shape,
-        self.nr_of_encoder_blocks = nr_of_encoder_blocks,
-        self.attention_key_dims= attention_key_dims,
-        self.attention_nr_of_heads= attention_nr_of_heads,
-        self.attention_dense_dims = attention_dense_dims,
+        self.mlm_input_shape = mlm_input_shape
+        self.nsp_input_shape = nsp_input_shape
+        self.nr_of_encoder_blocks = nr_of_encoder_blocks
+        self.attention_key_dims= attention_key_dims
+        self.attention_nr_of_heads= attention_nr_of_heads
+        self.attention_dense_dims = attention_dense_dims
         self.dropout_rate= dropout_rate
         
 #         self.loss_tracker = tf.keras.metrics.Mean(name="loss")
@@ -33,10 +34,10 @@ class BERT(tf.keras.Model):
         
         self.concatenate_inputs = tf.keras.layers.Concatenate(axis = 1, name = 'concatenate_inputs')
         
-        self.position_embedding = PositionEncoder(
-            input_dim = mlm_input_shape[0] + nsp_input_shape[0] , 
-            output_dim = mlm_input_shape[1]
-        )
+        # self.position_embedding = PositionEncoder(
+        #     input_dim = mlm_input_shape[0] + nsp_input_shape[0] , 
+        #     output_dim = mlm_input_shape[1]
+        # )
         
         self.transformer_encoders = []
         
@@ -53,14 +54,7 @@ class BERT(tf.keras.Model):
         
         self.nsp_output = tf.keras.layers.Dense(1, activation = 'sigmoid', name = 'nsp_classifier')
 
-        # Get output layer with `call` method
-        self.out = self.call([self.mlm_input, self.nsp_input])
 
-        # Reinitial
-        super(BERT, self).__init__(
-            inputs=[self.mlm_input, self.nsp_input],
-            outputs=self.out)        
-        
         
 #     def compute_loss(self, x, y, y_pred, sample_weight):
         
@@ -127,15 +121,15 @@ class BERT(tf.keras.Model):
 #         return {"loss": self.loss_tracker.result(), "mlm_loss": self.mlm_loss_tracker.result(), "nsp_loss": self.nsp_loss_tracker.result()}
 
 
-
-    def build(self):
-        # Initialize the graph
-        self._is_graph_network = True
-        self._init_graph_network(
-            inputs=[self.mlm_input, self.nsp_input],
-            outputs=[self.out]
+    def summary(self):
+        x = [self.mlm_input, self.nsp_input]
+        model = tf.keras.Model(
+            inputs=x,
+            outputs=self.call(x)
         )
-        
+        return model.summary()
+
+
         
      
     def call(self, inputs, training = True):
@@ -144,9 +138,9 @@ class BERT(tf.keras.Model):
         
         x = self.concatenate_inputs([mlm_input, nsp_input])
         
-        x_position_embeddings = self.position_embedding()
+#         x_position_embeddings = self.position_embedding()
         
-        x = tf.add(x, x_position_embeddings)
+#         x = tf.add(x, x_position_embeddings)
         
         for oEncoder in self.transformer_encoders:
             x = oEncoder(x)
@@ -159,6 +153,23 @@ class BERT(tf.keras.Model):
         
         return [mlm_output, nsp_output]
 
+    
+    
+    def get_config(self):
+        
+        return {
+            'mlm_input_shape': self.mlm_input_shape, 
+            'nsp_input_shape': self.nsp_input_shape,
+            'nr_of_encoder_blocks':self.nr_of_encoder_blocks, 
+            'attention_key_dims':self.attention_key_dims ,
+            'attention_nr_of_heads':self.attention_nr_of_heads,
+            'attention_dense_dims':self.attention_dense_dims,
+            'dropout_rate':self.dropout_rate
+        }
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
 
     
 def mlm_custom_loss( y_true, y_pred):
