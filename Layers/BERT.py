@@ -1,8 +1,8 @@
 import tensorflow as tf
-from PositionEncoder import PositionEncoder 
+# from PositionEncoder import PositionEncoder 
 from TransformerEncoder import TransformerEncoder 
 
-
+        
 class BERT(tf.keras.Model):
     def __init__(
         self, 
@@ -156,8 +156,8 @@ class BERT(tf.keras.Model):
     
     
     def get_config(self):
-        
-        return {
+        config = super(BERT, self).get_config()
+        config.update({
             'mlm_input_shape': self.mlm_input_shape, 
             'nsp_input_shape': self.nsp_input_shape,
             'nr_of_encoder_blocks':self.nr_of_encoder_blocks, 
@@ -165,11 +165,10 @@ class BERT(tf.keras.Model):
             'attention_nr_of_heads':self.attention_nr_of_heads,
             'attention_dense_dims':self.attention_dense_dims,
             'dropout_rate':self.dropout_rate
-        }
+        })
+        return config
 
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
+
 
     
 def mlm_custom_loss( y_true, y_pred):
